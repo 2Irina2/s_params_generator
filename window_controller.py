@@ -24,19 +24,19 @@ class SaveScreen(QtWidgets.QWidget):
 class WindowController:
 
     def __init__(self):
-        self.save_screen = SaveScreen("qwertyu")
+        self.input_screen = screens.InputScreen()
 
     def show_input_screen(self):
-        self.input_screen = screens.InputScreen()
         self.input_screen.switch_window.connect(self.show_generate_screen)
         self.input_screen.show()
 
     def show_generate_screen(self, input_data):
         self.generate_screen = screens.GenerateScreen(input_data)
         self.generate_screen.switch_window.connect(self.show_save_screen)
-        #self.input_screen.close()
+        self.input_screen.close()
         self.generate_screen.showMaximized()
 
     def show_save_screen(self, text):
+        self.save_screen = SaveScreen("qwertyu")
         self.generate_screen.close()
         self.save_screen.show()

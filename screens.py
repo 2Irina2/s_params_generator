@@ -5,7 +5,7 @@ import data_parser
 class GraphDataQModel(QtCore.QAbstractTableModel):
     def __init__(self, graph_data, header):
         super(GraphDataQModel, self).__init__()
-        self.table_data = graph_data  # data[0] = frequencies, data[1] = specifications[, data[2] = measurements]
+        self.table_data = [graph_data.frequencies, graph_data.specifications, graph_data.measurements]  # data[0] = frequencies, data[1] = specifications[, data[2] = measurements]
         self.header = header  # header = ['Frequency', 'Gain/Delay', 'Gain/Delay']
 
     def rowCount(self, parent=None, *args, **kwargs):
@@ -18,7 +18,7 @@ class GraphDataQModel(QtCore.QAbstractTableModel):
         if not index.isValid() or role != QtCore.Qt.DisplayRole:
             return QtCore.QVariant()
         else:
-            return QtCore.QVariant(self.table_data[index.column()][index.row()])
+            return QtCore.QVariant(str(self.table_data[index.column()][index.row()]))
 
     def headerData(self, index, orientation, role=QtCore.Qt.DisplayRole):
         if orientation == QtCore.Qt.Horizontal and role == QtCore.Qt.DisplayRole:
@@ -182,22 +182,17 @@ class GenerateScreen(QtWidgets.QWidget):
 
     def __init__(self, input_data):
         QtWidgets.QWidget.__init__(self)
-
         self.setWindowTitle('Generate S-parameters')
 
+        [il_graphdata, gd_graphdata, irl_graphdata, orl_graphdata] = data_parser.make_plot_data(input_data)
+        il_graphdata.set_measurements(il_graphdata.specifications)
+        gd_graphdata.set_measurements(gd_graphdata.specifications)
+        irl_graphdata.set_measurements(irl_graphdata.specifications)
+        orl_graphdata.set_measurements(orl_graphdata.specifications)
+
         layout = QtWidgets.QHBoxLayout()
-
-        il_data = [[1, 2, 3, 4, 5, 6, 7, 8, 9], [11, 22, 33, 44, 55, 66, 77, 88, 99],
-                      [111, 222, 333, 444, 555, 666, 777, 888, 999]]
-        gd_data = [[1, 2, 3, 4, 5, 6, 7, 8, 9], [11, 22, 33, 44, 55, 66, 77, 88, 99],
-                   [111, 222, 333, 444, 555, 666, 777, 888, 999]]
-        irl_data = [[1, 2, 3, 4, 5, 6, 7, 8, 9], [11, 22, 33, 44, 55, 66, 77, 88, 99],
-                   [111, 222, 333, 444, 555, 666, 777, 888, 999]]
-        orl_data = [[1, 2, 3, 4, 5, 6, 7, 8, 9], [11, 22, 33, 44, 55, 66, 77, 88, 99],
-                   [111, 222, 333, 444, 555, 666, 777, 888, 999]]
-
         layout.addLayout(self.make_graphs_layout(), 4)
-        layout.addLayout(self.make_tabs_layout([il_data, gd_data, irl_data, orl_data]), 1)
+        layout.addLayout(self.make_tabs_layout([il_graphdata, gd_graphdata, irl_graphdata, orl_graphdata]), 1)
         self.setLayout(layout)
 
     def make_graphs_layout(self):
@@ -226,20 +221,18 @@ class GenerateScreen(QtWidgets.QWidget):
         button_generate.clicked.connect(self.switch)
 
         tabs = QtWidgets.QTabWidget()
-        tabs.addTab(self.make_tab(graph_data[0], "dB"), "Insertion Loss")
-        tabs.addTab(self.make_tab(graph_data[1], "ns"), "Group Delay")
-        tabs.addTab(self.make_tab(graph_data[2], "dB"), "Input Loss")
-        tabs.addTab(self.make_tab(graph_data[3], "dB"), "Output Loss")
-
-        tabs.setMinimumWidth(337)  # TODO find a better way to scale the tab on the screen
+        for graph in graph_data:
+            tabs.addTab(self.make_tab(graph), graph.name)
+        tabs.setMinimumWidth(360)  # TODO find a better way to scale the tab on the screen
 
         panel.addWidget(tabs, 19, QtCore.Qt.AlignJustify)
         panel.addWidget(button_generate, 1, QtCore.Qt.AlignVCenter)
         return panel
 
-    def make_tab(self, graph_data, unit):
+    def make_tab(self, graph_data):
         tab = QtWidgets.QTableView()
-        header = ['Frequency (Mhz)', 'Specifications (' + unit + ')', 'Measurements (' + unit + ')']
+        header = ['Frequency (Mhz)', 'Specifications (' + graph_data.unit + ')',
+                  'Measurements (' + graph_data.unit + ')']
         model = GraphDataQModel(graph_data, header)
         tab.setModel(model)
         tab.verticalHeader().setVisible(False)

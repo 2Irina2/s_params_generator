@@ -6,7 +6,7 @@ from PyQt5 import QtWidgets
 def main():
     app = QtWidgets.QApplication(sys.argv)
     controller = window_controller.WindowController()
-    controller.show_generate_screen(None)
+    controller.show_input_screen()
     sys.exit(app.exec_())
 
 
