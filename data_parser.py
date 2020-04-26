@@ -1,5 +1,6 @@
 import io
 
+
 def get_numerical_data_from_text(text, negative=-1):
     """
     Parses the text given in the input screen and returns data that can be easily processed
@@ -189,6 +190,9 @@ def connect_range_plot(central_frequency, before_range_plot, after_range_plot):
 
 
 class InputData:
+    """
+    Wraps response data taken from the InputScreen
+    """
     def __init__(self, center_frequency, bandwidth, loss_center_frequency, il_inband, il_outband, gd_inband, gd_outband,
                  input_return, output_return):
         self.center_frequency_text = center_frequency
@@ -203,6 +207,9 @@ class InputData:
 
 
 class GraphData:
+    """
+    Wraps plotting data used in the graphs and tabs of GenerateScreen
+    """
     def __init__(self, name, unit, plot):
         self.name = name
         self.unit = unit

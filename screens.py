@@ -1,11 +1,16 @@
 from PyQt5 import QtCore, QtWidgets
 import data_parser
+import response_canvas
 
 
 class GraphDataQModel(QtCore.QAbstractTableModel):
+    """
+    Wraps the response graph data into a QAbstractTableModel for populating QTableView
+    """
     def __init__(self, graph_data, header):
         super(GraphDataQModel, self).__init__()
-        self.table_data = [graph_data.frequencies, graph_data.specifications, graph_data.measurements]  # data[0] = frequencies, data[1] = specifications[, data[2] = measurements]
+        self.table_data = [graph_data.frequencies, graph_data.specifications,
+                           graph_data.measurements]  # data[0] = frequencies, data[1] = specifications[, data[2] = measurements]
         self.header = header  # header = ['Frequency', 'Gain/Delay', 'Gain/Delay']
 
     def rowCount(self, parent=None, *args, **kwargs):
@@ -27,6 +32,10 @@ class GraphDataQModel(QtCore.QAbstractTableModel):
 
 
 class InputScreen(QtWidgets.QWidget):
+    """
+    Defines graphical interface for entering response data for Insertion Loss, Group Delay and (I/O) Return Loss
+    Retrieves InputData and passes it to the next screen for processing
+    """
     switch_window = QtCore.pyqtSignal(object)
 
     def __init__(self):
@@ -160,6 +169,7 @@ class InputScreen(QtWidgets.QWidget):
         return button
 
     def finish(self):
+        # TODO handle empty inputs
         center_frequency = self.center_frequency_line_edit.text()
         bandwidth = self.bandwidth_line_edit.text()
         loss_center_frequency = self.loss_at_center_line_edit.text()
@@ -177,6 +187,7 @@ class InputScreen(QtWidgets.QWidget):
         self.switch_window.emit(input_data)
 
 
+# TODO add measurements
 class GenerateScreen(QtWidgets.QWidget):
     switch_window = QtCore.pyqtSignal()
 
@@ -184,44 +195,60 @@ class GenerateScreen(QtWidgets.QWidget):
         QtWidgets.QWidget.__init__(self)
         self.setWindowTitle('Generate S-parameters')
 
-        [il_graphdata, gd_graphdata, irl_graphdata, orl_graphdata] = data_parser.make_plot_data(input_data)
-        il_graphdata.set_measurements(il_graphdata.specifications)
-        gd_graphdata.set_measurements(gd_graphdata.specifications)
-        irl_graphdata.set_measurements(irl_graphdata.specifications)
-        orl_graphdata.set_measurements(orl_graphdata.specifications)
-
+        # TODO make this prettier
+        [il, gd, irl, orl] = data_parser.make_plot_data(input_data)
+        il.set_measurements(il.specifications)
+        gd.set_measurements(gd.specifications)
+        irl.set_measurements(irl.specifications)
+        orl.set_measurements(orl.specifications)
+        self.graph_data = [il, gd, irl, orl]
+        """
+        if input data is none (...)
+        else:
+            il = data_parser.GraphData('IL', 'dB', [[0, 1, 2, 3, 4], [10, 1, 20, 3, 40]])
+            gd = data_parser.GraphData('GD', 'ns', [[0, 1, 2, 3, 4], [10, 1, 20, 3, 40]])
+            irl = data_parser.GraphData('IRL', 'dB', [[0, 1, 2, 3, 4], [10, 1, 20, 3, 40]])
+            orl = data_parser.GraphData('ORL', 'dB', [[0, 1, 2, 3, 4], [10, 1, 20, 3, 40]])
+            il.set_measurements(il.specifications)
+            gd.set_measurements(gd.specifications)
+            irl.set_measurements(irl.specifications)
+            orl.set_measurements(orl.specifications)
+            self.graph_data = [il, gd, irl, orl]
+        """
         layout = QtWidgets.QHBoxLayout()
         layout.addLayout(self.make_graphs_layout(), 4)
-        layout.addLayout(self.make_tabs_layout([il_graphdata, gd_graphdata, irl_graphdata, orl_graphdata]), 1)
+        layout.addLayout(self.make_tabs_layout(), 1)
         self.setLayout(layout)
 
     def make_graphs_layout(self):
         graphs = QtWidgets.QGridLayout()
-        layout_g1 = QtWidgets.QVBoxLayout()
-        layout_g1.addWidget(QtWidgets.QLabel('Graph1'), 1, QtCore.Qt.AlignBottom)
-        layout_g1.addWidget(QtWidgets.QPushButton('Graph1'), 1, QtCore.Qt.AlignTop)
-        layout_g2 = QtWidgets.QVBoxLayout()
-        layout_g2.addWidget(QtWidgets.QLabel('Graph2'), 1, QtCore.Qt.AlignBottom)
-        layout_g2.addWidget(QtWidgets.QPushButton('Graph2'), 1, QtCore.Qt.AlignTop)
-        layout_g3 = QtWidgets.QVBoxLayout()
-        layout_g3.addWidget(QtWidgets.QLabel('Graph3'), 1, QtCore.Qt.AlignBottom)
-        layout_g3.addWidget(QtWidgets.QPushButton('Graph3'), 1, QtCore.Qt.AlignTop)
-        layout_g4 = QtWidgets.QVBoxLayout()
-        layout_g4.addWidget(QtWidgets.QLabel('Graph4'), 1, QtCore.Qt.AlignBottom)
-        layout_g4.addWidget(QtWidgets.QPushButton('Graph4'), 1, QtCore.Qt.AlignTop)
-        graphs.addLayout(layout_g1, 0, 0)
-        graphs.addLayout(layout_g2, 0, 1)
-        graphs.addLayout(layout_g3, 1, 0)
-        graphs.addLayout(layout_g4, 1, 1)
+
+        graphs.addLayout(self.make_graph(self.graph_data[0]), 0, 0)
+        graphs.addLayout(self.make_graph(self.graph_data[1]), 0, 1)
+        graphs.addLayout(self.make_graph(self.graph_data[2]), 1, 0)
+        graphs.addLayout(self.make_graph(self.graph_data[3]), 1, 1)
+
         return graphs
 
-    def make_tabs_layout(self, graph_data):
+    def make_graph(self, graph_data):
+        canvas = response_canvas.ResponseCanvas(graph_data)
+        canvas.setFocusPolicy(QtCore.Qt.ClickFocus)
+        canvas.setFocus()
+
+        layout = QtWidgets.QVBoxLayout()
+        layout.addWidget(QtWidgets.QLabel(graph_data.name), 1, QtCore.Qt.AlignCenter)
+        layout.addWidget(canvas, 9, QtCore.Qt.AlignCenter)
+
+        return layout
+
+    def make_tabs_layout(self):
+        # TODO add listener for graph_data modifications
         panel = QtWidgets.QVBoxLayout()
         button_generate = QtWidgets.QPushButton('Generate')
         button_generate.clicked.connect(self.switch)
 
         tabs = QtWidgets.QTabWidget()
-        for graph in graph_data:
+        for graph in self.graph_data:
             tabs.addTab(self.make_tab(graph), graph.name)
         tabs.setMinimumWidth(360)  # TODO find a better way to scale the tab on the screen
 
