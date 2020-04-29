@@ -1,4 +1,4 @@
-from PyQt5 import QtCore, QtWidgets
+from PyQt5 import QtCore, QtWidgets, QtGui
 import data_parser
 import response_canvas
 
@@ -7,6 +7,7 @@ class GraphDataQModel(QtCore.QAbstractTableModel):
     """
     Wraps the response graph data into a QAbstractTableModel for populating QTableView
     """
+
     def __init__(self, graph_data, header):
         super(GraphDataQModel, self).__init__()
         self.table_data = [graph_data.frequencies, graph_data.specifications,
@@ -188,33 +189,41 @@ class InputScreen(QtWidgets.QWidget):
 
 
 # TODO add measurements
+# TODO fix "only size-1 arrays can be converted to Python scalars"
 class GenerateScreen(QtWidgets.QWidget):
-    switch_window = QtCore.pyqtSignal()
+    """
+    Screen for adjusting and visualizing the frequency response graphs
+    """
+    switch_window = QtCore.pyqtSignal(object)
 
     def __init__(self, input_data):
         QtWidgets.QWidget.__init__(self)
         self.setWindowTitle('Generate S-parameters')
 
         # TODO make this prettier
-        [il, gd, irl, orl] = data_parser.make_plot_data(input_data)
-        il.set_measurements(il.specifications)
-        gd.set_measurements(gd.specifications)
-        irl.set_measurements(irl.specifications)
-        orl.set_measurements(orl.specifications)
-        self.graph_data = [il, gd, irl, orl]
-        """
-        if input data is none (...)
-        else:
-            il = data_parser.GraphData('IL', 'dB', [[0, 1, 2, 3, 4], [10, 1, 20, 3, 40]])
-            gd = data_parser.GraphData('GD', 'ns', [[0, 1, 2, 3, 4], [10, 1, 20, 3, 40]])
-            irl = data_parser.GraphData('IRL', 'dB', [[0, 1, 2, 3, 4], [10, 1, 20, 3, 40]])
-            orl = data_parser.GraphData('ORL', 'dB', [[0, 1, 2, 3, 4], [10, 1, 20, 3, 40]])
+        if input_data is not None:
+            [il, gd, irl, orl] = data_parser.make_plot_data(input_data)
             il.set_measurements(il.specifications)
             gd.set_measurements(gd.specifications)
             irl.set_measurements(irl.specifications)
             orl.set_measurements(orl.specifications)
-            self.graph_data = [il, gd, irl, orl]
-        """
+            self.graph_data_list = [il, gd, irl, orl]
+        else:
+            il = data_parser.GraphData("IL", "dB", [[1, 2, 3, 4], [1, 2, 3, 4]])
+            gd = data_parser.GraphData("IL", "dB", [[1, 2, 3, 4], [1, 2, 3, 4]])
+            irl = data_parser.GraphData("IL", "dB", [[1, 2, 3, 4], [1, 2, 3, 4]])
+            orl = data_parser.GraphData("IL", "dB", [[1, 2, 3, 4], [1, 2, 3, 4]])
+            il.set_measurements(il.specifications)
+            gd.set_measurements(gd.specifications)
+            irl.set_measurements(irl.specifications)
+            orl.set_measurements(orl.specifications)
+            self.graph_data_list = [il, gd, irl, orl]
+
+        self.output_return_loss_canvas = response_canvas.ResponseCanvas(self.graph_data_list[3])
+        self.input_return_loss_canvas = response_canvas.ResponseCanvas(self.graph_data_list[2])
+        self.group_delay_canvas = response_canvas.ResponseCanvas(self.graph_data_list[1])
+        self.insertion_loss_canvas = response_canvas.ResponseCanvas(self.graph_data_list[0])
+
         layout = QtWidgets.QHBoxLayout()
         layout.addLayout(self.make_graphs_layout(), 4)
         layout.addLayout(self.make_tabs_layout(), 1)
@@ -223,20 +232,19 @@ class GenerateScreen(QtWidgets.QWidget):
     def make_graphs_layout(self):
         graphs = QtWidgets.QGridLayout()
 
-        graphs.addLayout(self.make_graph(self.graph_data[0]), 0, 0)
-        graphs.addLayout(self.make_graph(self.graph_data[1]), 0, 1)
-        graphs.addLayout(self.make_graph(self.graph_data[2]), 1, 0)
-        graphs.addLayout(self.make_graph(self.graph_data[3]), 1, 1)
+        graphs.addLayout(self.make_graph(self.insertion_loss_canvas, self.graph_data_list[0].name), 0, 0)
+        graphs.addLayout(self.make_graph(self.group_delay_canvas, self.graph_data_list[1].name), 0, 1)
+        graphs.addLayout(self.make_graph(self.input_return_loss_canvas, self.graph_data_list[2].name), 1, 0)
+        graphs.addLayout(self.make_graph(self.output_return_loss_canvas, self.graph_data_list[3].name), 1, 1)
 
         return graphs
 
-    def make_graph(self, graph_data):
-        canvas = response_canvas.ResponseCanvas(graph_data)
+    def make_graph(self, canvas, name):
         canvas.setFocusPolicy(QtCore.Qt.ClickFocus)
         canvas.setFocus()
 
         layout = QtWidgets.QVBoxLayout()
-        layout.addWidget(QtWidgets.QLabel(graph_data.name), 1, QtCore.Qt.AlignCenter)
+        layout.addWidget(QtWidgets.QLabel(name), 1, QtCore.Qt.AlignCenter)
         layout.addWidget(canvas, 9, QtCore.Qt.AlignCenter)
 
         return layout
@@ -245,10 +253,10 @@ class GenerateScreen(QtWidgets.QWidget):
         # TODO add listener for graph_data modifications
         panel = QtWidgets.QVBoxLayout()
         button_generate = QtWidgets.QPushButton('Generate')
-        button_generate.clicked.connect(self.switch)
+        button_generate.clicked.connect(self.generate)
 
         tabs = QtWidgets.QTabWidget()
-        for graph in self.graph_data:
+        for graph in self.graph_data_list:
             tabs.addTab(self.make_tab(graph), graph.name)
         tabs.setMinimumWidth(360)  # TODO find a better way to scale the tab on the screen
 
@@ -266,5 +274,99 @@ class GenerateScreen(QtWidgets.QWidget):
         tab.resizeColumnsToContents()
         return tab
 
-    def switch(self):
-        self.switch_window.emit()
+    def generate(self):
+        il = self.insertion_loss_canvas.graph_data
+        gd = self.group_delay_canvas.graph_data
+        irl = self.input_return_loss_canvas.graph_data
+        orl = self.output_return_loss_canvas.graph_data
+        self.switch_window.emit([il, gd, irl, orl])
+
+
+class SaveScreen(QtWidgets.QDialog):
+    """
+    Screen for generating the output and writing it to disk
+    """
+
+    exit_signal = QtCore.pyqtSignal()
+    restart_signal = QtCore.pyqtSignal()
+    cancel_signal = QtCore.pyqtSignal()
+
+    def __init__(self, output_data, parent=None):
+        super(SaveScreen, self).__init__(parent)
+        self.setWindowTitle("Save S-parameters and response")
+        self.output_data = output_data
+        layout = QtWidgets.QVBoxLayout()
+
+        self.filename = ""
+        self.path_line_edit = QtWidgets.QLineEdit()
+        self.path_line_edit.setReadOnly(True)
+        self.path_line_edit.setStyleSheet("background-color: rgb(174, 174, 174);")
+        self.save_and_reset_button = QtWidgets.QPushButton("Save and Reset")
+        self.save_and_close_button = QtWidgets.QPushButton("Save and Close")
+
+        layout.addLayout(self.make_path_layout(), 1)
+        layout.addLayout(self.make_buttons_layout(), 1)
+
+        self.setLayout(layout)
+
+    def make_path_layout(self):
+        box = QtWidgets.QHBoxLayout()
+        button = QtWidgets.QPushButton(QtGui.QIcon("folder_icon.png"), "")
+        button.clicked.connect(self.select_folder)
+
+        box.addWidget(QtWidgets.QLabel("Save S-params and response to: "), 4, QtCore.Qt.AlignRight)
+        box.addWidget(self.path_line_edit, 5, QtCore.Qt.AlignLeft)
+        box.addWidget(button, 1, QtCore.Qt.AlignCenter)
+
+        return box
+
+    def select_folder(self):
+        file_dialog = QtWidgets.QFileDialog(self)
+        file_dialog.setFileMode(QtWidgets.QFileDialog.DirectoryOnly)
+        file_dialog.setViewMode(QtWidgets.QFileDialog.List)
+
+        if file_dialog.exec_():
+            self.filename = file_dialog.selectedFiles()[0]
+            if self.filename != "":
+                self.path_line_edit.setText(self.filename)
+                self.save_and_close_button.setDisabled(False)
+                self.save_and_reset_button.setDisabled(False)
+
+    def make_buttons_layout(self):
+        box = QtWidgets.QHBoxLayout()
+
+        self.save_and_close_button.clicked.connect(self.save_and_close)
+        self.save_and_close_button.setDisabled(True)
+        self.save_and_reset_button.clicked.connect(self.save_and_reset)
+        self.save_and_reset_button.setDisabled(True)
+        cancel = QtWidgets.QPushButton("Cancel")
+        cancel.clicked.connect(self.cancel)
+
+        box.addWidget(self.save_and_close_button, 1, QtCore.Qt.AlignCenter)
+        box.addWidget(self.save_and_reset_button, 1, QtCore.Qt.AlignCenter)
+        box.addWidget(cancel, 1, QtCore.Qt.AlignCenter)
+
+        return box
+
+    def save_and_close(self):
+        self.save_data()
+        self.exit_signal.emit()
+
+    def save_and_reset(self):
+        self.save_data()
+        self.restart_signal.emit()
+
+    def cancel(self):
+        self.cancel_signal.emit()
+
+    def save_data(self):
+        s_params_location = self.filename+"/s_params.txt"
+        s_params_file = open(s_params_location, "w")
+        s_params_file.write("Save scatering parameters")
+        s_params_file.close()
+
+        response_location = self.filename + "/responses.txt"
+        response_file = open(response_location, "w")
+        response_text_data = data_parser.make_text_data(self.output_data)
+        response_file.write("\n".join(response_text_data))
+        response_file.close()

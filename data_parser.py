@@ -1,6 +1,8 @@
 import io
 
 
+#################################### InputData to GraphData #############################################
+
 def get_numerical_data_from_text(text, negative=-1):
     """
     Parses the text given in the input screen and returns data that can be easily processed
@@ -60,7 +62,7 @@ def make_plot_data(input_data):
     irl_plot = get_plot_returnloss(cf, irl_range)
     orl_plot = get_plot_returnloss(cf, orl_range)
 
-    return GraphData('Insertion Loss', 'dB', il_plot), GraphData('Group Delay', 'ns', gd_plot), \
+    return GraphData('Insertion Loss', 'dB', il_plot, cf, bw, loss_cf), GraphData('Group Delay', 'ns', gd_plot), \
            GraphData('Input Loss', 'dB', irl_plot), GraphData("Output Loss", 'dB', orl_plot)
 
 
@@ -189,10 +191,125 @@ def connect_range_plot(central_frequency, before_range_plot, after_range_plot):
     return final_plot_frequency, final_plot_response
 
 
+######################################## GraphData to OutputData ##########################################
+
+
+def make_text_data(graph_data_list):
+    il = graph_data_list[0]
+    gd = graph_data_list[1]
+    irl = graph_data_list[2]
+    orl = graph_data_list[3]
+
+    il_percent_contents, il_range_contents = get_percent_and_range(il.cf, il.bw, [il.frequencies, il.specifications],
+                                                                   il.loss_at_center)
+    gd_percent_contents, gd_range_contents = get_percent_and_range(il.cf, il.bw, [gd.frequencies, gd.specifications])
+    irl_plot = remove_redundant_plot_points(il.cf, [irl.frequencies, irl.specifications])
+    irl_range_contents = make_range_from_plot_data(il.cf, il.bw, irl_plot)
+    orl_plot = remove_redundant_plot_points(il.cf, [orl.frequencies, orl.specifications])
+    orl_range_contents = make_range_from_plot_data(il.cf, il.bw, orl_plot)
+
+    il_text = write_contents_to_string(il.name, il_range_contents, il.cf, il.bw, il_percent_contents, il.loss_at_center)
+    gd_text = write_contents_to_string(gd.name, gd_range_contents, il.cf, il.bw, gd_percent_contents)
+    irl_text = write_contents_to_string(irl.name, irl_range_contents, il.cf, il.bw)
+    orl_text = write_contents_to_string(orl.name, orl_range_contents, il.cf, il.bw)
+
+    return [il_text, gd_text, irl_text, orl_text]
+
+
+def get_percent_and_range(center_frequency, bandwidth, plot, loss_center=None, return_loss=0):
+    plot = remove_redundant_plot_points(center_frequency, plot)
+    frequencies = plot[0]
+    response = plot[1]
+
+    min_percent_ind = frequencies.index(center_frequency - bandwidth)
+    max_percent_ind = frequencies.index(center_frequency + bandwidth)
+    percent_plot = (frequencies[min_percent_ind:max_percent_ind + 1], response[min_percent_ind:max_percent_ind + 1])
+    range_plot = (frequencies[:min_percent_ind] + frequencies[max_percent_ind + 1:],
+                  response[:min_percent_ind] + response[max_percent_ind + 1:])
+
+    if return_loss == 0:
+        percent_contents = make_percent_from_plot_data(center_frequency, bandwidth, percent_plot,
+                                                       loss_center=loss_center)
+    else:
+        percent_contents = None
+    range_contents = make_range_from_plot_data(center_frequency, bandwidth, range_plot)
+
+    return percent_contents, range_contents
+
+
+def remove_redundant_plot_points(center_frequency, plot):
+    center_index = plot[0].index(center_frequency)
+    x = remove_redundant_list_elements(center_index, plot[0])
+    y = remove_redundant_list_elements(center_index, plot[1])
+    return x, y
+
+
+def remove_redundant_list_elements(center_index, list_to_clean):
+    clean_list = []
+    clean_list.extend(list_to_clean[:center_index][::2])
+    clean_list.extend(list_to_clean[center_index + 1:][::2])
+    return clean_list
+
+
+def make_percent_from_plot_data(center_frequency, bandwidth, plot, loss_center=None):
+    contents = []
+    for index in range(0, int(len(plot[0]) / 2)):
+        current_percentage = (center_frequency - plot[0][index]) * 200 / bandwidth
+        current_rejection = plot[1][index]
+        if loss_center is not None and current_percentage <= 100:
+            current_rejection -= loss_center
+        contents.append((int(current_percentage), round(current_rejection, 2)))
+    contents.reverse()
+    return contents
+
+
+def make_range_from_plot_data(center_frequency, bandwidth, plot):
+    contents = []
+    frequencies = plot[0]
+    for index in range(0, len(frequencies)):
+        if frequencies[index] < center_frequency:
+            if index + 1 == len(frequencies):
+                return contents
+            if frequencies[index + 1] < center_frequency:
+                contents.append(((frequencies[index] / 1000, frequencies[index + 1] / 1000), plot[1][index]))
+            else:
+                contents.append(((frequencies[index] / 1000, (center_frequency - bandwidth) / 1000), plot[1][index]))
+        else:
+            if index == 0:
+                continue
+            if frequencies[index - 1] > center_frequency:
+                contents.append(((frequencies[index - 1] / 1000, frequencies[index] / 1000), plot[1][index]))
+            else:
+                contents.append((((center_frequency + bandwidth) / 1000, frequencies[index] / 1000), plot[1][index]))
+    return contents
+
+
+def write_contents_to_string(title, range_contents, center_frequency, bandwidth, percent_contents=None, loss_at_center=None):
+    string_list = []
+    string_list.append(title + "\n")
+    string_list.append("Center frequency: " + str(center_frequency) + "\n")
+    string_list.append("Bandwidth: " + str(bandwidth) + "\n")
+    if loss_at_center is not None:
+        string_list.append("Loss at center frequency: " + str(loss_at_center) + "\n")
+    if percent_contents is not None:
+        string_list.append("In band:\n")
+        for content in percent_contents:
+            string_list.append(str(content[0]) + '%    ' + str(content[1]) + "\n")
+    string_list.append("\n")
+    string_list.append("Out of band:\n")
+    for content in range_contents:
+        string_list.append(str(content[0][0]) + " - " + str(content[0][1]) + "  " + str(content[1]) + "\n")
+    return ''.join(string_list)
+
+
+###################################### Data Models ###########################################
+
+
 class InputData:
     """
     Wraps response data taken from the InputScreen
     """
+
     def __init__(self, center_frequency, bandwidth, loss_center_frequency, il_inband, il_outband, gd_inband, gd_outband,
                  input_return, output_return):
         self.center_frequency_text = center_frequency
@@ -206,15 +323,20 @@ class InputData:
         self.output_return_loss_text = output_return
 
 
+# TODO: Make this prettier in terms of cf, bw and loss at center
 class GraphData:
     """
     Wraps plotting data used in the graphs and tabs of GenerateScreen
     """
-    def __init__(self, name, unit, plot):
+
+    def __init__(self, name, unit, plot, cf=None, bw=None, loss_at_center=None):
         self.name = name
         self.unit = unit
         self.frequencies = plot[0]
         self.specifications = plot[1]
+        self.cf = cf
+        self.bw = bw
+        self.loss_at_center = loss_at_center
 
     def set_measurements(self, measurements):
         self.measurements = measurements
@@ -223,4 +345,4 @@ class GraphData:
 class OutputData:
 
     def __init__(self):
-        print('OutputData created')
+        print("")

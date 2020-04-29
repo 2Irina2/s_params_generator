@@ -8,6 +8,14 @@ matplotlib.use('Qt5Agg')
 
 # TODO Solve maximum recursion depth exceeding while calling a Python object (not valid anymore??)
 class ResponseCanvas(FigureCanvasQTAgg):
+    """
+    Class responsible for rendering GraphData on a canvas and handling interaction
+        - left mouse button for picking and clicking
+        - scrolling wheel for zooming and point adjusting after picking
+        - spacebar for default view
+        - up/down arrows for point adjusting after picking
+        - left/right arrows for navigation between points
+    """
 
     def __init__(self, graph_data):
         figure = Figure()
@@ -66,6 +74,7 @@ class ResponseCanvas(FigureCanvasQTAgg):
         else:
             self.adjust(event.button)
 
+    # TODO make this smoother
     def zoom(self, event, base_scale=2):
         # get the current x and y limits
         cur_xlim = self.axes.get_xlim()
@@ -90,6 +99,7 @@ class ResponseCanvas(FigureCanvasQTAgg):
                             ydata + cur_yrange * scale_factor])
         self.draw()  # force re-draw
 
+    # TODO fix wacky movement while adjusting
     def adjust(self, key):
         if key == "up":
             self.graph_data.specifications[self.picked_index] = self.graph_data.specifications[self.picked_index] + 1
@@ -100,6 +110,7 @@ class ResponseCanvas(FigureCanvasQTAgg):
         self.axes.clear()
         self.picked_label = self.axes.text(freq + 0.5, spec + 0.5, str(freq) + " " + str(spec))
         self.specs, = self.axes.plot(self.graph_data.frequencies, self.graph_data.specifications, 'or-', picker=2)
+        self.set_axes_limits()
         self.draw()
 
     def onkey(self, event):
@@ -127,6 +138,13 @@ class ResponseCanvas(FigureCanvasQTAgg):
             self.picked_label.remove()
         self.picked_label = self.axes.text(x[self.picked_index] + 0.5, y[self.picked_index] + 0.5,
                                            str(x[self.picked_index]) + " " + str(y[self.picked_index]))
+        self.set_axes_limits()
+        # Show
+        self.draw()
+
+    def set_axes_limits(self):
+        y = self.graph_data.specifications
+        x = self.graph_data.frequencies
         # Update view
         cur_xlim = self.axes.get_xlim()
         cur_ylim = self.axes.get_ylim()
@@ -134,5 +152,3 @@ class ResponseCanvas(FigureCanvasQTAgg):
         cur_yrange = (cur_ylim[1] - cur_ylim[0]) * .5
         self.axes.set_xlim([x[self.picked_index] - cur_xrange, x[self.picked_index] + cur_xrange])
         self.axes.set_ylim([y[self.picked_index] - cur_yrange, y[self.picked_index] + cur_yrange])
-        # Show
-        self.draw()
