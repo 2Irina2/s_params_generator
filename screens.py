@@ -1,35 +1,7 @@
 from PyQt5 import QtCore, QtWidgets, QtGui
 import data_parser
 import response_canvas
-
-
-class GraphDataQModel(QtCore.QAbstractTableModel):
-    """
-    Wraps the response graph data into a QAbstractTableModel for populating QTableView
-    """
-
-    def __init__(self, graph_data, header):
-        super(GraphDataQModel, self).__init__()
-        self.table_data = [graph_data.frequencies, graph_data.specifications,
-                           graph_data.measurements]  # data[0] = frequencies, data[1] = specifications[, data[2] = measurements]
-        self.header = header  # header = ['Frequency', 'Gain/Delay', 'Gain/Delay']
-
-    def rowCount(self, parent=None, *args, **kwargs):
-        return len(self.table_data[0])
-
-    def columnCount(self, parent=None, *args, **kwargs):
-        return len(self.table_data)
-
-    def data(self, index, role=QtCore.Qt.DisplayRole):
-        if not index.isValid() or role != QtCore.Qt.DisplayRole:
-            return QtCore.QVariant()
-        else:
-            return QtCore.QVariant(str(self.table_data[index.column()][index.row()]))
-
-    def headerData(self, index, orientation, role=QtCore.Qt.DisplayRole):
-        if orientation == QtCore.Qt.Horizontal and role == QtCore.Qt.DisplayRole:
-            return QtCore.QVariant(self.header[index])
-        return QtCore.QVariant()
+import models
 
 
 class InputScreen(QtWidgets.QWidget):
@@ -181,7 +153,7 @@ class InputScreen(QtWidgets.QWidget):
         input_return = self.inputreturnloss_text_edit.toPlainText()
         output_return = self.outputreturnloss_text_edit.toPlainText()
 
-        input_data = data_parser.InputData(center_frequency, bandwidth, loss_center_frequency, insertion_loss_inband,
+        input_data = models.InputData(center_frequency, bandwidth, loss_center_frequency, insertion_loss_inband,
                                            insertion_loss_outband, group_delay_inband, group_delay_outband,
                                            input_return,
                                            output_return)
@@ -200,19 +172,23 @@ class GenerateScreen(QtWidgets.QWidget):
         QtWidgets.QWidget.__init__(self)
         self.setWindowTitle('Generate S-parameters')
 
-        # TODO make this prettier
+        # TODO handle empty inputs
         if input_data is not None:
-            [il, gd, irl, orl] = data_parser.make_plot_data(input_data)
+            self.numerical_data = data_parser.make_plot_data(input_data)
+            il = self.numerical_data.insertion_loss
+            gd = self.numerical_data.group_delay
+            irl = self.numerical_data.input_return_loss
+            orl = self.numerical_data.output_return_loss
             il.set_measurements(il.specifications)
             gd.set_measurements(gd.specifications)
             irl.set_measurements(irl.specifications)
             orl.set_measurements(orl.specifications)
             self.graph_data_list = [il, gd, irl, orl]
         else:
-            il = data_parser.GraphData("IL", "dB", [[1, 2, 3, 4], [1, 2, 3, 4]])
-            gd = data_parser.GraphData("IL", "dB", [[1, 2, 3, 4], [1, 2, 3, 4]])
-            irl = data_parser.GraphData("IL", "dB", [[1, 2, 3, 4], [1, 2, 3, 4]])
-            orl = data_parser.GraphData("IL", "dB", [[1, 2, 3, 4], [1, 2, 3, 4]])
+            il = models.GraphData("IL", "dB", [[1, 2, 3, 4], [1, 2, 3, 4]])
+            gd = models.GraphData("IL", "dB", [[1, 2, 3, 4], [1, 2, 3, 4]])
+            irl = models.GraphData("IL", "dB", [[1, 2, 3, 4], [1, 2, 3, 4]])
+            orl = models.GraphData("IL", "dB", [[1, 2, 3, 4], [1, 2, 3, 4]])
             il.set_measurements(il.specifications)
             gd.set_measurements(gd.specifications)
             irl.set_measurements(irl.specifications)
@@ -268,7 +244,7 @@ class GenerateScreen(QtWidgets.QWidget):
         tab = QtWidgets.QTableView()
         header = ['Frequency (Mhz)', 'Specifications (' + graph_data.unit + ')',
                   'Measurements (' + graph_data.unit + ')']
-        model = GraphDataQModel(graph_data, header)
+        model = models.GraphDataQModel(graph_data, header)
         tab.setModel(model)
         tab.verticalHeader().setVisible(False)
         tab.resizeColumnsToContents()
@@ -279,7 +255,8 @@ class GenerateScreen(QtWidgets.QWidget):
         gd = self.group_delay_canvas.graph_data
         irl = self.input_return_loss_canvas.graph_data
         orl = self.output_return_loss_canvas.graph_data
-        self.switch_window.emit([il, gd, irl, orl])
+        self.numerical_data.set_graph_datas(il, gd, irl, orl)
+        self.switch_window.emit(self.numerical_data)
 
 
 class SaveScreen(QtWidgets.QDialog):
@@ -291,10 +268,10 @@ class SaveScreen(QtWidgets.QDialog):
     restart_signal = QtCore.pyqtSignal()
     cancel_signal = QtCore.pyqtSignal()
 
-    def __init__(self, output_data, parent=None):
+    def __init__(self, numerical_data, parent=None):
         super(SaveScreen, self).__init__(parent)
         self.setWindowTitle("Save S-parameters and response")
-        self.output_data = output_data
+        self.numerical_data = numerical_data
         layout = QtWidgets.QVBoxLayout()
 
         self.filename = ""
@@ -367,6 +344,6 @@ class SaveScreen(QtWidgets.QDialog):
 
         response_location = self.filename + "/responses.txt"
         response_file = open(response_location, "w")
-        response_text_data = data_parser.make_text_data(self.output_data)
+        response_text_data = data_parser.make_text_data(self.numerical_data)
         response_file.write("\n".join(response_text_data))
         response_file.close()

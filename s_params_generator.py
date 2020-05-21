@@ -21,8 +21,8 @@ class WindowController:
         self.input_screen.close()
         self.generate_screen.showMaximized()
 
-    def show_save_screen(self, output_data):
-        self.save_screen = screens.SaveScreen(output_data)
+    def show_save_screen(self, numerical_data):
+        self.save_screen = screens.SaveScreen(numerical_data)
         self.save_screen.exit_signal.connect(exit_application)
         self.save_screen.restart_signal.connect(self.restart_application)
         self.save_screen.cancel_signal.connect(self.cancel_save)

@@ -7,6 +7,7 @@ matplotlib.use('Qt5Agg')
 
 
 # TODO Solve maximum recursion depth exceeding while calling a Python object (not valid anymore??)
+# TODO Add details to axes, labels etc
 class ResponseCanvas(FigureCanvasQTAgg):
     """
     Class responsible for rendering GraphData on a canvas and handling interaction

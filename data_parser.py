@@ -1,7 +1,8 @@
 import io
+import models
 
 
-#################################### InputData to GraphData #############################################
+#################################### InputData to NumericalData #############################################
 
 def get_numerical_data_from_text(text, negative=-1):
     """
@@ -52,7 +53,8 @@ def make_plot_data(input_data):
     """
     Transforms given InputData object into GraphData objects for each of the 4 graphs
     :param input_data: InputData object containing the text input
-    :return: 4 GraphData objects with plot vectors and unit for Insertion Loss, Group Delay and Return Loss
+    :return: 4 GraphData objects for Insertion Loss, Group Delay and Return Loss as well as the
+             3 response features (center frequency, bandwidth, loss at center frequency)
     """
     cf, bw, loss_cf, il_percent, il_range, gd_percent, gd_range, irl_range, orl_range = \
         get_numerical_data_from_input_data(input_data)
@@ -62,12 +64,10 @@ def make_plot_data(input_data):
     irl_plot = get_plot_returnloss(cf, irl_range)
     orl_plot = get_plot_returnloss(cf, orl_range)
 
-    return GraphData('Insertion Loss', 'dB', il_plot, cf, bw, loss_cf), GraphData('Group Delay', 'ns', gd_plot), \
-           GraphData('Input Loss', 'dB', irl_plot), GraphData("Output Loss", 'dB', orl_plot)
+    return models.NumericalData(cf, bw, loss_cf, il_plot, gd_plot, irl_plot, orl_plot)
 
 
-def get_plot_insertionloss_groupdelay(center_frequency, bandwidth, percent_contents, range_contents,
-                                      loss_center=None):
+def get_plot_insertionloss_groupdelay(center_frequency, bandwidth, percent_contents, range_contents, loss_center=None):
     """
     Creates data for plotting Insertion Loss or Group delay
     :param center_frequency: The central frequency
@@ -191,32 +191,47 @@ def connect_range_plot(central_frequency, before_range_plot, after_range_plot):
     return final_plot_frequency, final_plot_response
 
 
-######################################## GraphData to OutputData ##########################################
+######################################## NumericalData to text ##########################################
 
 
-def make_text_data(graph_data_list):
-    il = graph_data_list[0]
-    gd = graph_data_list[1]
-    irl = graph_data_list[2]
-    orl = graph_data_list[3]
+def make_text_data(numerical_data):
+    """
+    Transforms given NumericalData object into text objects for each of the 4 graphs
+    :param numerical_data: NumericalData object containing the GraphData objects and graph features
+    :return: array of 4 text objects, one for each response
+    """
+    cf = numerical_data.center_frequency
+    bw = numerical_data.bandwidth
+    lac = numerical_data.loss_at_center
+    il = numerical_data.insertion_loss
+    gd = numerical_data.group_delay
+    irl = numerical_data.input_return_loss
+    orl = numerical_data.output_return_loss
 
-    il_percent_contents, il_range_contents = get_percent_and_range(il.cf, il.bw, [il.frequencies, il.specifications],
-                                                                   il.loss_at_center)
-    gd_percent_contents, gd_range_contents = get_percent_and_range(il.cf, il.bw, [gd.frequencies, gd.specifications])
-    irl_plot = remove_redundant_plot_points(il.cf, [irl.frequencies, irl.specifications])
-    irl_range_contents = make_range_from_plot_data(il.cf, il.bw, irl_plot)
-    orl_plot = remove_redundant_plot_points(il.cf, [orl.frequencies, orl.specifications])
-    orl_range_contents = make_range_from_plot_data(il.cf, il.bw, orl_plot)
+    il_percent_contents, il_range_contents = get_percent_and_range(cf, bw, [il.frequencies, il.specifications], lac)
+    gd_percent_contents, gd_range_contents = get_percent_and_range(cf, bw, [gd.frequencies, gd.specifications])
+    irl_plot = remove_redundant_plot_points(cf, [irl.frequencies, irl.specifications])
+    irl_range_contents = make_range_from_plot_data(cf, bw, irl_plot)
+    orl_plot = remove_redundant_plot_points(cf, [orl.frequencies, orl.specifications])
+    orl_range_contents = make_range_from_plot_data(cf, bw, orl_plot)
 
-    il_text = write_contents_to_string(il.name, il_range_contents, il.cf, il.bw, il_percent_contents, il.loss_at_center)
-    gd_text = write_contents_to_string(gd.name, gd_range_contents, il.cf, il.bw, gd_percent_contents)
-    irl_text = write_contents_to_string(irl.name, irl_range_contents, il.cf, il.bw)
-    orl_text = write_contents_to_string(orl.name, orl_range_contents, il.cf, il.bw)
+    il_text = write_contents_to_string(il.name, il_range_contents, cf, bw, il_percent_contents, lac)
+    gd_text = write_contents_to_string(gd.name, gd_range_contents, cf, bw, gd_percent_contents)
+    irl_text = write_contents_to_string(irl.name, irl_range_contents, cf, bw)
+    orl_text = write_contents_to_string(orl.name, orl_range_contents, cf, bw)
 
     return [il_text, gd_text, irl_text, orl_text]
 
 
-def get_percent_and_range(center_frequency, bandwidth, plot, loss_center=None, return_loss=0):
+def get_percent_and_range(center_frequency, bandwidth, plot, loss_center=None):
+    """
+    For given plot data generate text output compatible with the InputData format
+    :param center_frequency: the central frequency
+    :param bandwidth: the response bandwidth
+    :param plot: the plot data containing frequencies and specifications
+    :param loss_center: the loss at central frequency. Default is none. Makes sense only for Insertion Loss graph
+    :return 2 blocks of text corresponding to the percentage, respectively range inputs
+    """
     plot = remove_redundant_plot_points(center_frequency, plot)
     frequencies = plot[0]
     response = plot[1]
@@ -227,11 +242,7 @@ def get_percent_and_range(center_frequency, bandwidth, plot, loss_center=None, r
     range_plot = (frequencies[:min_percent_ind] + frequencies[max_percent_ind + 1:],
                   response[:min_percent_ind] + response[max_percent_ind + 1:])
 
-    if return_loss == 0:
-        percent_contents = make_percent_from_plot_data(center_frequency, bandwidth, percent_plot,
-                                                       loss_center=loss_center)
-    else:
-        percent_contents = None
+    percent_contents = make_percent_from_plot_data(center_frequency, bandwidth, percent_plot, loss_center=loss_center)
     range_contents = make_range_from_plot_data(center_frequency, bandwidth, range_plot)
 
     return percent_contents, range_contents
@@ -251,6 +262,7 @@ def remove_redundant_list_elements(center_index, list_to_clean):
     return clean_list
 
 
+# TODO: update loss at center if value for 50% is greater than 1
 def make_percent_from_plot_data(center_frequency, bandwidth, plot, loss_center=None):
     contents = []
     for index in range(0, int(len(plot[0]) / 2)):
@@ -284,11 +296,20 @@ def make_range_from_plot_data(center_frequency, bandwidth, plot):
     return contents
 
 
-def write_contents_to_string(title, range_contents, center_frequency, bandwidth, percent_contents=None, loss_at_center=None):
-    string_list = []
-    string_list.append(title + "\n")
-    string_list.append("Center frequency: " + str(center_frequency) + "\n")
-    string_list.append("Bandwidth: " + str(bandwidth) + "\n")
+def write_contents_to_string(title, range_contents, center_frequency, bandwidth, percent_contents=None,
+                             loss_at_center=None):
+    """
+    Compiles all text information for one graph into one block
+    :param title: the name of the response
+    :param range_contents: the text block for range specification
+    :param center_frequency: the central frequency
+    :param bandwidth: the bandwidth
+    :param percent_contents: the text block for percent specification. Default is none (for IRL and ORL)
+    :param loss_at_center: the loss at central frequency. Default is none. Makes sense only for Insertion Loss graph
+    :return: One block of text containing the information for the graph
+    """
+    string_list = [title + "\n", "Center frequency: " + str(center_frequency) + "\n",
+                   "Bandwidth: " + str(bandwidth) + "\n"]
     if loss_at_center is not None:
         string_list.append("Loss at center frequency: " + str(loss_at_center) + "\n")
     if percent_contents is not None:
@@ -300,49 +321,3 @@ def write_contents_to_string(title, range_contents, center_frequency, bandwidth,
     for content in range_contents:
         string_list.append(str(content[0][0]) + " - " + str(content[0][1]) + "  " + str(content[1]) + "\n")
     return ''.join(string_list)
-
-
-###################################### Data Models ###########################################
-
-
-class InputData:
-    """
-    Wraps response data taken from the InputScreen
-    """
-
-    def __init__(self, center_frequency, bandwidth, loss_center_frequency, il_inband, il_outband, gd_inband, gd_outband,
-                 input_return, output_return):
-        self.center_frequency_text = center_frequency
-        self.bandwidth_text = bandwidth
-        self.loss_center_frequency_text = loss_center_frequency
-        self.insertion_loss_inband_text = il_inband
-        self.insertion_loss_outofband_text = il_outband
-        self.group_delay_inband_text = gd_inband
-        self.group_delay_outofband_text = gd_outband
-        self.input_return_loss_text = input_return
-        self.output_return_loss_text = output_return
-
-
-# TODO: Make this prettier in terms of cf, bw and loss at center
-class GraphData:
-    """
-    Wraps plotting data used in the graphs and tabs of GenerateScreen
-    """
-
-    def __init__(self, name, unit, plot, cf=None, bw=None, loss_at_center=None):
-        self.name = name
-        self.unit = unit
-        self.frequencies = plot[0]
-        self.specifications = plot[1]
-        self.cf = cf
-        self.bw = bw
-        self.loss_at_center = loss_at_center
-
-    def set_measurements(self, measurements):
-        self.measurements = measurements
-
-
-class OutputData:
-
-    def __init__(self):
-        print("")
