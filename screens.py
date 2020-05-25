@@ -161,6 +161,7 @@ class InputScreen(QtWidgets.QWidget):
 
 
 # TODO add measurements
+# TODO add confirmation dialog when clicking the x button above
 # TODO fix "only size-1 arrays can be converted to Python scalars"
 class GenerateScreen(QtWidgets.QWidget):
     """
@@ -179,20 +180,12 @@ class GenerateScreen(QtWidgets.QWidget):
             gd = self.numerical_data.group_delay
             irl = self.numerical_data.input_return_loss
             orl = self.numerical_data.output_return_loss
-            il.set_measurements(il.specifications)
-            gd.set_measurements(gd.specifications)
-            irl.set_measurements(irl.specifications)
-            orl.set_measurements(orl.specifications)
             self.graph_data_list = [il, gd, irl, orl]
         else:
             il = models.GraphData("IL", "dB", [[1, 2, 3, 4], [1, 2, 3, 4]])
             gd = models.GraphData("IL", "dB", [[1, 2, 3, 4], [1, 2, 3, 4]])
             irl = models.GraphData("IL", "dB", [[1, 2, 3, 4], [1, 2, 3, 4]])
             orl = models.GraphData("IL", "dB", [[1, 2, 3, 4], [1, 2, 3, 4]])
-            il.set_measurements(il.specifications)
-            gd.set_measurements(gd.specifications)
-            irl.set_measurements(irl.specifications)
-            orl.set_measurements(orl.specifications)
             self.graph_data_list = [il, gd, irl, orl]
 
         self.output_return_loss_canvas = response_canvas.ResponseCanvas(self.graph_data_list[3])
