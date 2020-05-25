@@ -36,7 +36,24 @@ class InputScreen(QtWidgets.QWidget):
         layout.addWidget(tabs_widget, 1, QtCore.Qt.AlignHCenter)
         layout.addWidget(self.make_finish_button(), 1, QtCore.Qt.AlignRight)
 
+        self.set_content_debug()
         self.setLayout(layout)
+
+    def set_content_debug(self):
+        self.center_frequency_line_edit.setText("19750")
+        self.bandwidth_line_edit.setText("800")
+        self.loss_at_center_line_edit.setText("-1")
+        il_percent = "50%     -0.2\n70%	    -0.3\n80%	    -0.45\n90%     -0.7\n100%	-1.9\n150%	-20\n175%	-30\n200%	-40"
+        self.insertionloss_inband_text_edit.setText(il_percent)
+        il_range = "2.520 - 8.400	-120\n10.70 - 11.50	-100\n17.30 - 17.55	-100\n17.55 - 17.80	-80\n22    - 21.20	-60\n24.75 - 25.25	-60\n27.00 - 30.00	-60\n30.00 - 31.00	-50\n37.50 - 40.00	-50\n40.00 - 48.00	-40"
+        self.insertionloss_outofband_text_edit.setText(il_range)
+        gd_percent = "50%     2\n90%     6\n100%	12\n150%	18\n200%	25"
+        self.groupdelay_inband_text_edit.setText(gd_percent)
+        gd_range = "2.520 - 8.400	60\n40.00 - 48.00   80"
+        self.groupdelay_outofband_text_edit.setText(gd_range)
+        irl = "2.520 - 8.400	-20\n10.70 - 11.50	-20\n17.30 - 17.55	-80\n17.55 - 17.80	-100\n22    - 21.20	-80\n24.75 - 25.25	-60\n27.00 - 30.00	-60\n30.00 - 31.00	-50\n37.50 - 40.00	-50\n40.00 - 48.00	-20"
+        self.inputreturnloss_text_edit.setText(irl)
+        self.outputreturnloss_text_edit.setText(irl)
 
     def setup_window(self):
         self.setWindowTitle('Input')

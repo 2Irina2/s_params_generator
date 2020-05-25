@@ -131,7 +131,6 @@ class GraphData:
                 xi.append(freq + offset)
                 index = np.where(x == self.take_closest(freq, x))
                 yi.append(y[index[0][0]])
-        print(xi)
         return xi, yi
 
     def take_closest(self, num, collection):

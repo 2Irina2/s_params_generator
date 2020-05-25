@@ -2,6 +2,8 @@ import matplotlib
 from matplotlib.backend_bases import MouseButton
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
 from matplotlib.figure import Figure
+from scipy import interpolate
+import numpy as np
 
 matplotlib.use('Qt5Agg')
 
@@ -14,8 +16,8 @@ class ResponseCanvas(FigureCanvasQTAgg):
         - left mouse button for picking and clicking
         - scrolling wheel for zooming and point adjusting after picking
         - spacebar for default view
-        - up/down arrows for point adjusting after picking
-        - left/right arrows for navigation between points
+        - arrow keys for point adjusting after picking
+        - A/D keys for navigation between points
     """
 
     def __init__(self, graph_data):
@@ -27,7 +29,13 @@ class ResponseCanvas(FigureCanvasQTAgg):
         self.axis_limits = self.make_axis_limits()
 
         self.axes = figure.add_subplot(111)
-        self.specs, = self.axes.plot(self.graph_data.frequencies, self.graph_data.specifications, 'or-', picker=2)
+        self.specs, = self.axes.plot(self.graph_data.frequencies, self.graph_data.specifications, 'ob-', picker=2)
+        print(self.graph_data.measurements_x)
+        print(self.graph_data.measurements_y)
+        f = interpolate.interp1d(self.graph_data.measurements_x, self.graph_data.measurements_y, kind='quadratic')
+        xf = np.linspace(self.graph_data.measurements_x[0], self.graph_data.measurements_x[-1], 1000)
+        self.mes_curve, = self.axes.plot(xf, f(xf), 'r-')
+        self.mes_data, = self.axes.plot(self.graph_data.measurements_x, self.graph_data.measurements_y, 'ro', picker=2)
 
         self.specs.figure.canvas.mpl_connect('pick_event', self.onpick)
         self.specs.figure.canvas.mpl_connect('button_press_event', self.onclick)
