@@ -177,7 +177,6 @@ class InputScreen(QtWidgets.QWidget):
         self.switch_window.emit(input_data)
 
 
-# TODO add measurements
 # TODO add confirmation dialog when clicking the x button above
 # TODO fix "only size-1 arrays can be converted to Python scalars"
 class GenerateScreen(QtWidgets.QWidget):

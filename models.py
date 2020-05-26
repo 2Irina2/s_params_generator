@@ -62,7 +62,7 @@ class GraphData:
         x_bez, y_bez = self.build_bezier(list(zip(self.frequencies, self.specifications))).T
         y_bez = self.shift_bezier_outside_specs(y_bez)
 
-        x_round = [round(num) for num in self.specifications]
+        x_round = [round(num) for num in self.frequencies]
         x_unique = list(dict.fromkeys(x_round))
 
         xi, yi = self.map_curve_to_frequencies([x_bez, y_bez], x_unique, offset_fraction=20, sampling_threshold=3000)

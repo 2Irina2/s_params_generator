@@ -23,26 +23,51 @@ class ResponseCanvas(FigureCanvasQTAgg):
     def __init__(self, graph_data):
         figure = Figure()
         super(ResponseCanvas, self).__init__(figure)
+        self.specs = None
+        self.mes_data = None
+        self.mes_curve = None
+
         self.picked_label = None
         self.picked_index = -1
+        self.picked_artist = ""
+
         self.graph_data = graph_data
         self.axis_limits = self.make_axis_limits()
-
         self.axes = figure.add_subplot(111)
+
+        self.draw_specifications()
+        self.draw_measurements()
+
+        self.connect_events_to_artists()
+
+        self.pickEvent = False
+
+    def draw_specifications(self):
+        if self.specs is not None:
+            self.specs.remove()
         self.specs, = self.axes.plot(self.graph_data.frequencies, self.graph_data.specifications, 'ob-', picker=2)
-        print(self.graph_data.measurements_x)
-        print(self.graph_data.measurements_y)
+
+    def draw_measurements(self):
+        if self.mes_data is not None and self.mes_curve is not None:
+            self.mes_data.remove()
+            self.mes_curve.remove()
         f = interpolate.interp1d(self.graph_data.measurements_x, self.graph_data.measurements_y, kind='quadratic')
         xf = np.linspace(self.graph_data.measurements_x[0], self.graph_data.measurements_x[-1], 1000)
-        self.mes_curve, = self.axes.plot(xf, f(xf), 'r-')
         self.mes_data, = self.axes.plot(self.graph_data.measurements_x, self.graph_data.measurements_y, 'ro', picker=2)
+        self.mes_curve, = self.axes.plot(xf, f(xf), 'r-')
 
+    def draw_label(self, frequency, response):
+        if self.picked_label is not None:
+            self.picked_label.remove()
+            self.picked_label = None
+        self.picked_label = self.axes.text(frequency + 0.5, response + 0.5,
+                                           str(frequency) + ' ' + str(response))
+
+    def connect_events_to_artists(self):
         self.specs.figure.canvas.mpl_connect('pick_event', self.onpick)
         self.specs.figure.canvas.mpl_connect('button_press_event', self.onclick)
         self.specs.figure.canvas.mpl_connect('scroll_event', self.onscroll)
         self.specs.figure.canvas.mpl_connect('key_press_event', self.onkey)
-
-        self.pickEvent = False
 
     def make_axis_limits(self):
         axis_limits = []
@@ -70,10 +95,8 @@ class ResponseCanvas(FigureCanvasQTAgg):
             ydata = thisline.get_ydata()
             ind = event.ind
             self.picked_index = ind[0]
-            if self.picked_label is not None:
-                self.picked_label.remove()
-            self.picked_label = self.axes.text(xdata[ind] + 0.5, ydata[ind] + 0.5,
-                                               str(xdata[ind[0]]) + ' ' + str(ydata[ind[0]]))
+            self.picked_artist = thisline.get_label()
+            self.draw_label(xdata[ind[0]], ydata[ind[0]])
             self.draw()
         self.pickEvent = True
 
@@ -83,8 +106,7 @@ class ResponseCanvas(FigureCanvasQTAgg):
         else:
             self.adjust(event.button)
 
-    # TODO make this smoother
-    def zoom(self, event, base_scale=2):
+    def zoom(self, event, base_scale=1.1):
         # get the current x and y limits
         cur_xlim = self.axes.get_xlim()
         cur_ylim = self.axes.get_ylim()
@@ -108,17 +130,57 @@ class ResponseCanvas(FigureCanvasQTAgg):
                             ydata + cur_yrange * scale_factor])
         self.draw()  # force re-draw
 
-    # TODO fix wacky movement while adjusting
     def adjust(self, key):
-        if key == "up":
-            self.graph_data.specifications[self.picked_index] = self.graph_data.specifications[self.picked_index] + 1
-        elif key == "down":
-            self.graph_data.specifications[self.picked_index] = self.graph_data.specifications[self.picked_index] - 1
-        freq = self.graph_data.frequencies[self.picked_index]
-        spec = self.graph_data.specifications[self.picked_index]
-        self.axes.clear()
-        self.picked_label = self.axes.text(freq + 0.5, spec + 0.5, str(freq) + " " + str(spec))
-        self.specs, = self.axes.plot(self.graph_data.frequencies, self.graph_data.specifications, 'or-', picker=2)
+        if self.picked_artist == "_line0":
+            if key == "up":
+                self.graph_data.specifications[self.picked_index] = self.graph_data.specifications[
+                                                                        self.picked_index] + 1
+            elif key == "down":
+                self.graph_data.specifications[self.picked_index] = self.graph_data.specifications[
+                                                                        self.picked_index] - 1
+            elif key == "right":
+                newvalue = self.graph_data.frequencies[self.picked_index] + 10
+                if newvalue >= self.graph_data.frequencies[self.picked_index + 1]:
+                    self.graph_data.frequencies[self.picked_index] = self.graph_data.frequencies[
+                                                                            self.picked_index + 1] + 0.1
+                else:
+                    self.graph_data.frequencies[self.picked_index] = newvalue
+            elif key == "left":
+                newvalue = self.graph_data.frequencies[self.picked_index] - 10
+                if newvalue <= self.graph_data.frequencies[self.picked_index - 1]:
+                    self.graph_data.frequencies[self.picked_index] = self.graph_data.frequencies[
+                                                                            self.picked_index - 1] + 0.1
+                else:
+                    self.graph_data.frequencies[self.picked_index] = newvalue
+            freq = self.graph_data.frequencies[self.picked_index]
+            resp = self.graph_data.specifications[self.picked_index]
+            self.draw_specifications()
+        elif self.picked_artist == "_line1":
+            if key == "up":
+                self.graph_data.measurements_y[self.picked_index] = self.graph_data.measurements_y[
+                                                                        self.picked_index] + 1
+            elif key == "down":
+                self.graph_data.measurements_y[self.picked_index] = self.graph_data.measurements_y[
+                                                                        self.picked_index] - 1
+            elif key == "right":
+                newvalue = self.graph_data.measurements_x[self.picked_index] + 10
+                if newvalue >= self.graph_data.measurements_x[self.picked_index+1]:
+                    self.graph_data.measurements_x[self.picked_index] = self.graph_data.measurements_x[self.picked_index+1]+0.1
+                else:
+                    self.graph_data.measurements_x[self.picked_index] = newvalue
+            elif key == "left":
+                newvalue = self.graph_data.measurements_x[self.picked_index] - 10
+                if newvalue <= self.graph_data.measurements_x[self.picked_index-1]:
+                    self.graph_data.measurements_x[self.picked_index] = self.graph_data.measurements_x[self.picked_index-1]+0.1
+                else:
+                    self.graph_data.measurements_x[self.picked_index] = newvalue
+            freq = self.graph_data.measurements_x[self.picked_index]
+            resp = self.graph_data.measurements_y[self.picked_index]
+            self.draw_measurements()
+        else:
+            freq = 0
+            resp = 0
+        self.draw_label(freq, resp)
         self.set_axes_limits()
         self.draw()
 
@@ -126,7 +188,7 @@ class ResponseCanvas(FigureCanvasQTAgg):
         if event.key == ' ':
             self.axes.axis(self.axis_limits)
             self.draw()
-        elif event.key == "up" or event.key == "down":
+        elif event.key == "up" or event.key == "down" or event.key == "left" or event.key == "right":
             if self.picked_index != -1:
                 self.adjust(event.key)
         else:
@@ -134,26 +196,22 @@ class ResponseCanvas(FigureCanvasQTAgg):
                 self.navigate(event.key)
 
     def navigate(self, key):
-        y = self.graph_data.specifications
-        x = self.graph_data.frequencies
-        if key == "left":
+        y = self.graph_data.specifications if self.picked_artist == "_line0" else self.graph_data.measurements_y
+        x = self.graph_data.frequencies if self.picked_artist == "_line0" else self.graph_data.measurements_x
+        if key == "a":
             if self.picked_index > 0:
                 self.picked_index -= 1
-        elif key == "right":
+        elif key == "d":
             if self.picked_index < len(y) - 1:
                 self.picked_index += 1
-        # Update label
-        if self.picked_label is not None:
-            self.picked_label.remove()
-        self.picked_label = self.axes.text(x[self.picked_index] + 0.5, y[self.picked_index] + 0.5,
-                                           str(x[self.picked_index]) + " " + str(y[self.picked_index]))
+        self.draw_label(x[self.picked_index], y[self.picked_index])
         self.set_axes_limits()
         # Show
         self.draw()
 
     def set_axes_limits(self):
-        y = self.graph_data.specifications
-        x = self.graph_data.frequencies
+        y = self.graph_data.specifications if self.picked_artist == "_line0" else self.graph_data.measurements_y
+        x = self.graph_data.frequencies if self.picked_artist == "_line0" else self.graph_data.measurements_x
         # Update view
         cur_xlim = self.axes.get_xlim()
         cur_ylim = self.axes.get_ylim()
