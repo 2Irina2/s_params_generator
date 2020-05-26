@@ -8,8 +8,6 @@ import numpy as np
 matplotlib.use('Qt5Agg')
 
 
-# TODO Solve maximum recursion depth exceeding while calling a Python object (not valid anymore??)
-# TODO Add details to axes, labels etc
 class ResponseCanvas(FigureCanvasQTAgg):
     """
     Class responsible for rendering GraphData on a canvas and handling interaction
@@ -34,6 +32,8 @@ class ResponseCanvas(FigureCanvasQTAgg):
         self.graph_data = graph_data
         self.axis_limits = self.make_axis_limits()
         self.axes = figure.add_subplot(111)
+        self.axes.set_xlabel('Frequency(Mhz)')
+        self.axes.set_ylabel('Response(' + graph_data.unit + ')')
 
         self.draw_specifications()
         self.draw_measurements()
@@ -60,8 +60,10 @@ class ResponseCanvas(FigureCanvasQTAgg):
         if self.picked_label is not None:
             self.picked_label.remove()
             self.picked_label = None
-        self.picked_label = self.axes.text(frequency + 0.5, response + 0.5,
-                                           str(frequency) + ' ' + str(response))
+        self.picked_label = self.axes.text(frequency + 800, response - 10,
+                                           str(round(frequency, 2)) + ', ' + str(round(response, 2)))
+        self.picked_label.set_backgroundcolor('gray')
+        self.picked_label.set_color('white')
 
     def connect_events_to_artists(self):
         self.specs.figure.canvas.mpl_connect('pick_event', self.onpick)
@@ -142,14 +144,14 @@ class ResponseCanvas(FigureCanvasQTAgg):
                 newvalue = self.graph_data.frequencies[self.picked_index] + 10
                 if newvalue >= self.graph_data.frequencies[self.picked_index + 1]:
                     self.graph_data.frequencies[self.picked_index] = self.graph_data.frequencies[
-                                                                            self.picked_index + 1] + 0.1
+                                                                         self.picked_index + 1] + 0.1
                 else:
                     self.graph_data.frequencies[self.picked_index] = newvalue
             elif key == "left":
                 newvalue = self.graph_data.frequencies[self.picked_index] - 10
                 if newvalue <= self.graph_data.frequencies[self.picked_index - 1]:
                     self.graph_data.frequencies[self.picked_index] = self.graph_data.frequencies[
-                                                                            self.picked_index - 1] + 0.1
+                                                                         self.picked_index - 1] + 0.1
                 else:
                     self.graph_data.frequencies[self.picked_index] = newvalue
             freq = self.graph_data.frequencies[self.picked_index]
@@ -164,14 +166,16 @@ class ResponseCanvas(FigureCanvasQTAgg):
                                                                         self.picked_index] - 1
             elif key == "right":
                 newvalue = self.graph_data.measurements_x[self.picked_index] + 10
-                if newvalue >= self.graph_data.measurements_x[self.picked_index+1]:
-                    self.graph_data.measurements_x[self.picked_index] = self.graph_data.measurements_x[self.picked_index+1]+0.1
+                if newvalue >= self.graph_data.measurements_x[self.picked_index + 1]:
+                    self.graph_data.measurements_x[self.picked_index] = self.graph_data.measurements_x[
+                                                                            self.picked_index + 1] + 0.1
                 else:
                     self.graph_data.measurements_x[self.picked_index] = newvalue
             elif key == "left":
                 newvalue = self.graph_data.measurements_x[self.picked_index] - 10
-                if newvalue <= self.graph_data.measurements_x[self.picked_index-1]:
-                    self.graph_data.measurements_x[self.picked_index] = self.graph_data.measurements_x[self.picked_index-1]+0.1
+                if newvalue <= self.graph_data.measurements_x[self.picked_index - 1]:
+                    self.graph_data.measurements_x[self.picked_index] = self.graph_data.measurements_x[
+                                                                            self.picked_index - 1] + 0.1
                 else:
                     self.graph_data.measurements_x[self.picked_index] = newvalue
             freq = self.graph_data.measurements_x[self.picked_index]
