@@ -243,20 +243,34 @@ class GenerateScreen(QtWidgets.QWidget):
         tabs = QtWidgets.QTabWidget()
         for graph in self.graph_data_list:
             tabs.addTab(self.make_tab(graph), graph.name)
-        tabs.setMinimumWidth(360)  # TODO find a better way to scale the tab on the screen
+        tabs.setMinimumWidth(510)  # TODO find a better way to scale the tab on the screen
 
         panel.addWidget(tabs, 19, QtCore.Qt.AlignJustify)
         panel.addWidget(button_generate, 1, QtCore.Qt.AlignVCenter)
         return panel
 
     def make_tab(self, graph_data):
-        tab = QtWidgets.QTableView()
-        header = ['Frequency (Mhz)', 'Specifications (' + graph_data.unit + ')',
-                  'Measurements (' + graph_data.unit + ')']
-        model = models.GraphDataQModel(graph_data, header)
-        tab.setModel(model)
-        tab.verticalHeader().setVisible(False)
-        tab.resizeColumnsToContents()
+        tab = QtWidgets.QGroupBox()
+
+        tables = QtWidgets.QHBoxLayout()
+        table_mes = QtWidgets.QTableView()
+        header_measurements = ['Frequency (Mhz)', 'Measurements (' + graph_data.unit + ')']
+        model_mes = models.GraphDataQModel(graph_data.measurements_x, graph_data.measurements_y, header_measurements)
+        table_mes.setModel(model_mes)
+        table_spec = QtWidgets.QTableView()
+        header_specifications = ['Frequency (Mhz)', 'Specifications (' + graph_data.unit + ')']
+        model_spec = models.GraphDataQModel(graph_data.frequencies, graph_data.specifications, header_specifications)
+        table_spec.setModel(model_spec)
+
+        table_mes.verticalHeader().setVisible(False)
+        table_spec.verticalHeader().setVisible(False)
+        table_mes.resizeColumnsToContents()
+        table_spec.resizeColumnsToContents()
+
+        tables.addWidget(table_mes, 1, QtCore.Qt.AlignJustify)
+        tables.addWidget(table_spec, 1, QtCore.Qt.AlignJustify)
+
+        tab.setLayout(tables)
         return tab
 
     def generate(self):

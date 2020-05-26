@@ -33,8 +33,8 @@ class NumericalData:
         self.loss_at_center = lac
         self.insertion_loss = GraphData('Insertion Loss', 'dB', il_plot)
         self.group_delay = GraphData('Group Delay', 'ns', gd_plot)
-        self.input_return_loss = GraphData('Input Loss', 'dB', irl_plot)
-        self.output_return_loss = GraphData("Output Loss", 'dB', orl_plot)
+        self.input_return_loss = GraphData('Input Return Loss', 'dB', irl_plot)
+        self.output_return_loss = GraphData("Output Return Loss", 'dB', orl_plot)
 
     def set_graph_datas(self, il, gd, irl, orl):
         self.insertion_loss = il
@@ -142,13 +142,12 @@ class GraphDataQModel(QtCore.QAbstractTableModel):
     Wraps the response graph data into a QAbstractTableModel for populating QTableView
     """
 
-    def __init__(self, graph_data, header):
+    def __init__(self, frequencies, response, header):
         super(GraphDataQModel, self).__init__()
-        # data[0] = frequencies, data[1] = specifications[, data[2] = measurements]
-        self.table_data = [graph_data.frequencies, graph_data.specifications,
-                           # graph_data.measurements] TODO fix this to show measurements correctly
-                           graph_data.specifications]
-        self.header = header  # header = ['Frequency', 'Gain/Delay', 'Gain/Delay']
+        # data[0] = frequencies, data[1] = response
+        response_round = [round(num, 2) for num in response]
+        self.table_data = [frequencies, response_round]
+        self.header = header  # header = ['Frequency', 'Response']
 
     def rowCount(self, parent=None, *args, **kwargs):
         return len(self.table_data[0])
