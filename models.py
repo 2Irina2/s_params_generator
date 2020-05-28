@@ -1,6 +1,11 @@
 from PyQt5 import QtCore
 import numpy as np
 from scipy.special import binom
+from scipy.integrate import cumtrapz
+
+
+def take_closest(num, collection):
+    return min(collection, key=lambda x: abs(x - num))
 
 
 class InputData:
@@ -54,6 +59,10 @@ class GraphData:
         self.frequencies = plot[0]
         self.specifications = plot[1]
         self.measurements_x, self.measurements_y = self.generate_measurements()
+        self.interpolation_function = None
+
+    def set_interpolation_function(self, f):
+        self.interpolation_function = f
 
     def generate_measurements(self):
         """
@@ -129,12 +138,97 @@ class GraphData:
                 if i < len(frequencies) / 2 - 1:
                     offset = -offset
                 xi.append(freq + offset)
-                index = np.where(x == self.take_closest(freq, x))
+                index = np.where(x == take_closest(freq, x))
                 yi.append(y[index[0][0]])
         return xi, yi
 
-    def take_closest(self, num, collection):
-        return min(collection, key=lambda x: abs(x - num))
+
+class SparamsData:
+
+    def __init__(self, numerical_data, absolute_losses, ang_s11, ang_s22, mag_s12, ang_s12):
+        self.numerical_data = numerical_data
+        self.absolute_losses = float(absolute_losses)
+        self.ang_s11 = ang_s11
+        self.ang_s22 = ang_s22
+        self.mag_s12 = None
+        self.ang_s12 = None
+        if mag_s12 != "" and ang_s12 != "":
+            self.mag_s12 = mag_s12
+            self.ang_s12 = ang_s12
+
+    def compute_parameters(self):
+        frequencies = self.numerical_data.insertion_loss.measurements_x + \
+                      self.numerical_data.group_delay.measurements_x + \
+                      self.numerical_data.input_return_loss.measurements_x + \
+                      self.numerical_data.output_return_loss.measurements_x
+        frequencies.sort()
+        frequencies = list(dict.fromkeys(frequencies))
+
+        irl_start_freq = self.numerical_data.input_return_loss.measurements_x[0]
+        irl_end_freq = self.numerical_data.input_return_loss.measurements_x[-1]
+        mag_s11_function = self.numerical_data.input_return_loss.interpolation_function
+
+        il_start_freq = self.numerical_data.insertion_loss.measurements_x[0]
+        il_end_freq = self.numerical_data.insertion_loss.measurements_x[-1]
+        mag_s21_function = self.numerical_data.insertion_loss.interpolation_function
+
+        gd_start_freq = self.numerical_data.group_delay.measurements_x[0]
+        gd_start_index = frequencies.index(take_closest(gd_start_freq, frequencies))
+        gd_end_freq = self.numerical_data.group_delay.measurements_x[-1]
+        gd_end_index = frequencies.index(take_closest(gd_end_freq, frequencies))
+        gd_function = self.numerical_data.group_delay.interpolation_function
+        gd_y = gd_function(frequencies[gd_start_index:gd_end_index+1])
+        for i in range(gd_start_index):
+            np.insert(gd_y, 0, gd_function(gd_start_freq))
+        for i in range(gd_end_index+1, len(frequencies)):
+            np.append(gd_y, gd_function(gd_end_freq))
+        gd_integrated = cumtrapz(gd_y, frequencies, initial=gd_y[0])
+        gd_integrated[0] = gd_integrated[1]
+        print(list(gd_integrated))
+
+        orl_start_freq = self.numerical_data.output_return_loss.measurements_x[0]
+        orl_end_freq = self.numerical_data.output_return_loss.measurements_x[-1]
+        mag_s22_function = self.numerical_data.output_return_loss.interpolation_function
+
+        lines = []
+        for freq in frequencies:
+            index = frequencies.index(freq)
+            if freq < irl_start_freq:
+                mag_s11 = mag_s11_function(irl_start_freq)
+            elif freq > irl_end_freq:
+                mag_s11 = mag_s11_function(irl_end_freq)
+            else:
+                mag_s11 = mag_s11_function(freq)
+            if freq < il_start_freq:
+                mag_s21 = mag_s21_function(il_start_freq)
+            elif freq > il_end_freq:
+                mag_s21 = mag_s21_function(il_end_freq)
+            else:
+                mag_s21 = mag_s21_function(freq)
+            if freq < orl_start_freq:
+                mag_s22 = mag_s22_function(orl_start_freq)
+            elif freq > orl_end_freq:
+                mag_s22 = mag_s22_function(orl_end_freq)
+            else:
+                mag_s22 = mag_s22_function(freq)
+
+            line = []
+            line.append(str(freq))
+            line.append(str(np.round(mag_s11, 2)))
+            line.append(self.ang_s11)
+            line.append(str(np.round(mag_s21) + self.absolute_losses))
+            line.append(str(np.round(gd_integrated[index], 2)))
+            if self.mag_s12 is None and self.ang_s12 is None:
+                line.append(str(np.round(mag_s21) + self.absolute_losses))
+                line.append(str(np.round(gd_integrated[index], 2)))
+            else:
+                line.append(self.mag_s12)
+                line.append(self.ang_s12)
+            line.append(str(np.round(mag_s22, 2)))
+            line.append(self.ang_s22)
+            lines.append("\t".join(line))
+
+        return lines
 
 
 class GraphDataQModel(QtCore.QAbstractTableModel):

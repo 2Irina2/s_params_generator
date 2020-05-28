@@ -55,6 +55,7 @@ class ResponseCanvas(FigureCanvasQTAgg):
         xf = np.linspace(self.graph_data.measurements_x[0], self.graph_data.measurements_x[-1], 1000)
         self.mes_data, = self.axes.plot(self.graph_data.measurements_x, self.graph_data.measurements_y, 'ro', picker=2)
         self.mes_curve, = self.axes.plot(xf, f(xf), 'r-')
+        self.graph_data.set_interpolation_function(f)
 
     def draw_label(self, frequency, response):
         if self.picked_label is not None:

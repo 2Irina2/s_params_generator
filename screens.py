@@ -1,4 +1,5 @@
 from PyQt5 import QtCore, QtWidgets, QtGui
+from datetime import datetime
 import data_parser
 import response_canvas
 import models
@@ -297,26 +298,110 @@ class SaveScreen(QtWidgets.QDialog):
         self.numerical_data = numerical_data
         layout = QtWidgets.QVBoxLayout()
 
-        self.filename = ""
+        self.filter_name_line_edit = QtWidgets.QLineEdit()
+        self.absolute_losses = QtWidgets.QLineEdit()
+        self.symmetry = QtWidgets.QCheckBox("")
+        self.ang_s11_line_edit = QtWidgets.QLineEdit()
+        self.ang_s22_line_edit = QtWidgets.QLineEdit()
+        self.mag_s12_line_edit = QtWidgets.QLineEdit()
+        self.ang_s12_line_edit = QtWidgets.QLineEdit()
+        self.path = ""
         self.path_line_edit = QtWidgets.QLineEdit()
-        self.path_line_edit.setReadOnly(True)
-        self.path_line_edit.setStyleSheet("background-color: rgb(174, 174, 174);")
         self.save_and_reset_button = QtWidgets.QPushButton("Save and Reset")
         self.save_and_close_button = QtWidgets.QPushButton("Save and Close")
+        self.save_and_continue_button = QtWidgets.QPushButton("Save and Continue")
 
+        layout.addLayout(self.make_filter_name_layout(), 1)
+        layout.addLayout(self.make_symmetry_layout(), 1)
+        layout.addLayout(self.make_params_layout(), 1)
         layout.addLayout(self.make_path_layout(), 1)
         layout.addLayout(self.make_buttons_layout(), 1)
 
+        self.set_debug_text()
         self.setLayout(layout)
+
+    def set_debug_text(self):
+        self.filter_name_line_edit.setText("filter")
+        self.absolute_losses.setText("10")
+        self.ang_s11_line_edit.setText("1")
+        self.ang_s22_line_edit.setText("2")
 
     def make_path_layout(self):
         box = QtWidgets.QHBoxLayout()
         button = QtWidgets.QPushButton(QtGui.QIcon("folder_icon.png"), "")
         button.clicked.connect(self.select_folder)
 
+        self.path_line_edit.setReadOnly(True)
+        self.path_line_edit.setStyleSheet("background-color: rgb(174, 174, 174);")
+
         box.addWidget(QtWidgets.QLabel("Save S-params and response to: "), 4, QtCore.Qt.AlignRight)
         box.addWidget(self.path_line_edit, 5, QtCore.Qt.AlignLeft)
-        box.addWidget(button, 1, QtCore.Qt.AlignCenter)
+        box.addWidget(button, 1, QtCore.Qt.AlignLeft)
+
+        return box
+
+    def make_filter_name_layout(self):
+        box = QtWidgets.QHBoxLayout()
+
+        box.addWidget(QtWidgets.QLabel("Name of filter: "), 4, QtCore.Qt.AlignRight)
+        box.addWidget(self.filter_name_line_edit, 5, QtCore.Qt.AlignLeft)
+
+        return box
+
+    def make_symmetry_layout(self):
+        box = QtWidgets.QHBoxLayout()
+
+        box.addWidget(QtWidgets.QLabel("Absolute losses (dB): "), 1, QtCore.Qt.AlignRight)
+        box.addWidget(self.absolute_losses, 1, QtCore.Qt.AlignLeft)
+        box.addWidget(QtWidgets.QLabel("Symmetry? "), 1, QtCore.Qt.AlignRight)
+        box.addWidget(self.symmetry, 1, QtCore.Qt.AlignLeft)
+        self.symmetry.stateChanged.connect(self.check_symmetry)
+        self.symmetry.setChecked(True)
+
+        return box
+
+    def check_symmetry(self, state):
+        if QtCore.Qt.Checked == state:
+            self.mag_s12_line_edit.clear()
+            self.mag_s12_line_edit.setReadOnly(True)
+            self.mag_s12_line_edit.setStyleSheet("background-color: rgb(174, 174, 174);")
+            self.ang_s12_line_edit.clear()
+            self.ang_s12_line_edit.setReadOnly(True)
+            self.ang_s12_line_edit.setStyleSheet("background-color: rgb(174, 174, 174);")
+        else:
+            self.mag_s12_line_edit.setReadOnly(False)
+            self.mag_s12_line_edit.setStyleSheet("background-color: white;")
+            self.ang_s12_line_edit.setReadOnly(False)
+            self.ang_s12_line_edit.setStyleSheet("background-color: white;")
+
+    def make_params_layout(self):
+        box = QtWidgets.QHBoxLayout()
+        left = QtWidgets.QVBoxLayout()
+        right = QtWidgets.QVBoxLayout()
+
+        s11 = QtWidgets.QHBoxLayout()
+        s11.addWidget(QtWidgets.QLabel("S11 phase(°): "), 1, QtCore.Qt.AlignRight)
+        s11.addWidget(self.ang_s11_line_edit, 1, QtCore.Qt.AlignLeft)
+        s22 = QtWidgets.QHBoxLayout()
+        s22.addWidget(QtWidgets.QLabel("S22 phase(°): "), 1, QtCore.Qt.AlignRight)
+        s22.addWidget(self.ang_s22_line_edit, 1, QtCore.Qt.AlignLeft)
+        mags12 = QtWidgets.QHBoxLayout()
+        mags12.addWidget(QtWidgets.QLabel("S12 magnitude(dB): "), 1, QtCore.Qt.AlignRight)
+        mags12.addWidget(self.mag_s12_line_edit, 1, QtCore.Qt.AlignLeft)
+        self.mag_s12_line_edit.setReadOnly(True)
+        self.mag_s12_line_edit.setStyleSheet("background-color: rgb(174, 174, 174);")
+        angs12 = QtWidgets.QHBoxLayout()
+        angs12.addWidget(QtWidgets.QLabel("S12 phase(°): "), 1, QtCore.Qt.AlignRight)
+        angs12.addWidget(self.ang_s12_line_edit, 1, QtCore.Qt.AlignLeft)
+        self.ang_s12_line_edit.setReadOnly(True)
+        self.ang_s12_line_edit.setStyleSheet("background-color: rgb(174, 174, 174);")
+
+        left.addLayout(s11)
+        left.addLayout(s22)
+        right.addLayout(mags12)
+        right.addLayout(angs12)
+        box.addLayout(left)
+        box.addLayout(right)
 
         return box
 
@@ -326,11 +411,12 @@ class SaveScreen(QtWidgets.QDialog):
         file_dialog.setViewMode(QtWidgets.QFileDialog.List)
 
         if file_dialog.exec_():
-            self.filename = file_dialog.selectedFiles()[0]
-            if self.filename != "":
-                self.path_line_edit.setText(self.filename)
+            self.path = file_dialog.selectedFiles()[0]
+            if self.path != "":
+                self.path_line_edit.setText(self.path)
                 self.save_and_close_button.setDisabled(False)
                 self.save_and_reset_button.setDisabled(False)
+                self.save_and_continue_button.setDisabled(False)
 
     def make_buttons_layout(self):
         box = QtWidgets.QHBoxLayout()
@@ -339,11 +425,14 @@ class SaveScreen(QtWidgets.QDialog):
         self.save_and_close_button.setDisabled(True)
         self.save_and_reset_button.clicked.connect(self.save_and_reset)
         self.save_and_reset_button.setDisabled(True)
+        self.save_and_continue_button.clicked.connect(self.save_and_continue)
+        self.save_and_continue_button.setDisabled(True)
         cancel = QtWidgets.QPushButton("Cancel")
         cancel.clicked.connect(self.cancel)
 
         box.addWidget(self.save_and_close_button, 1, QtCore.Qt.AlignCenter)
         box.addWidget(self.save_and_reset_button, 1, QtCore.Qt.AlignCenter)
+        box.addWidget(self.save_and_continue_button, 1, QtCore.Qt.AlignCenter)
         box.addWidget(cancel, 1, QtCore.Qt.AlignCenter)
 
         return box
@@ -356,17 +445,43 @@ class SaveScreen(QtWidgets.QDialog):
         self.save_data()
         self.restart_signal.emit()
 
+    def save_and_continue(self):
+        self.save_data()
+        self.cancel_signal.emit()
+
     def cancel(self):
         self.cancel_signal.emit()
 
     def save_data(self):
-        s_params_location = self.filename+"/s_params.txt"
-        s_params_file = open(s_params_location, "w")
-        s_params_file.write("Save scatering parameters")
-        s_params_file.close()
+        self.filter_name = self.filter_name_line_edit.text()
+        self.save_responses()
 
-        response_location = self.filename + "/responses.txt"
+        absolute_losses = self.absolute_losses.text()
+        ang_s11 = self.ang_s11_line_edit.text()
+        ang_s22 = self.ang_s22_line_edit.text()
+        mag_s12 = self.mag_s12_line_edit.text()
+        ang_s12 = self.ang_s12_line_edit.text()
+        sparams_data = models.SparamsData(self.numerical_data, absolute_losses, ang_s11, ang_s22, mag_s12, ang_s12)
+        sparams_lines = sparams_data.compute_parameters()
+        self.save_sparams(sparams_lines)
+
+    def save_responses(self):
+        response_location = self.path + "/" + self.filter_name + "-responses.txt"
         response_file = open(response_location, "w")
+
         response_text_data = data_parser.make_text_data(self.numerical_data)
         response_file.write("\n".join(response_text_data))
+
         response_file.close()
+
+    def save_sparams(self, lines):
+        s_params_location = self.path + "/" + self.filter_name + "-s_params.s2p"
+        s_params_file = open(s_params_location, "w")
+
+        s_params_file.write("! Date & Time: " + str(datetime.now()) + "\n")
+        s_params_file.write("! Filter name: " + self.filter_name + "\n")
+        s_params_file.write("# Mhz S DB R 50\n")
+        s_params_file.write("! Frequency dB(S11) ang(S11) dB(S21) ang(S21) dB(S12) ang(S12) dB(S22) ang(S22)\n")
+        s_params_file.write("\n".join(lines))
+
+        s_params_file.close()
