@@ -157,12 +157,13 @@ class SparamsData:
             self.ang_s12 = ang_s12
 
     def compute_parameters(self):
-        frequencies = self.numerical_data.insertion_loss.measurements_x + \
-                      self.numerical_data.group_delay.measurements_x + \
-                      self.numerical_data.input_return_loss.measurements_x + \
-                      self.numerical_data.output_return_loss.measurements_x
+        frequencies = self.numerical_data.insertion_loss.frequencies + \
+                      self.numerical_data.group_delay.frequencies + \
+                      self.numerical_data.input_return_loss.frequencies + \
+                      self.numerical_data.output_return_loss.frequencies
         frequencies.sort()
         frequencies = list(dict.fromkeys(frequencies))
+        frequencies = list(np.linspace(frequencies[0], frequencies[-1], 500))
 
         irl_start_freq = self.numerical_data.input_return_loss.measurements_x[0]
         irl_end_freq = self.numerical_data.input_return_loss.measurements_x[-1]
@@ -182,9 +183,7 @@ class SparamsData:
             np.insert(gd_y, 0, gd_function(gd_start_freq))
         for i in range(gd_end_index+1, len(frequencies)):
             np.append(gd_y, gd_function(gd_end_freq))
-        gd_integrated = cumtrapz(gd_y, frequencies, initial=gd_y[0])
-        gd_integrated[0] = gd_integrated[1]
-        print(list(gd_integrated))
+        phase = cumtrapz(gd_y, initial=0)
 
         orl_start_freq = self.numerical_data.output_return_loss.measurements_x[0]
         orl_end_freq = self.numerical_data.output_return_loss.measurements_x[-1]
@@ -213,14 +212,14 @@ class SparamsData:
                 mag_s22 = mag_s22_function(freq)
 
             line = []
-            line.append(str(freq))
+            line.append(str(np.round(freq, 2)))
             line.append(str(np.round(mag_s11, 2)))
             line.append(self.ang_s11)
-            line.append(str(np.round(mag_s21) + self.absolute_losses))
-            line.append(str(np.round(gd_integrated[index], 2)))
+            line.append(str(np.round(mag_s21) - abs(self.absolute_losses)))
+            line.append(str(np.round(-phase[index], 2)))
             if self.mag_s12 is None and self.ang_s12 is None:
-                line.append(str(np.round(mag_s21) + self.absolute_losses))
-                line.append(str(np.round(gd_integrated[index], 2)))
+                line.append(str(np.round(mag_s21) - abs(self.absolute_losses)))
+                line.append(str(np.round(-phase[index], 2)))
             else:
                 line.append(self.mag_s12)
                 line.append(self.ang_s12)

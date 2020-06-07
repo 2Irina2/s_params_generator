@@ -323,8 +323,8 @@ class SaveScreen(QtWidgets.QDialog):
     def set_debug_text(self):
         self.filter_name_line_edit.setText("filter")
         self.absolute_losses.setText("10")
-        self.ang_s11_line_edit.setText("1")
-        self.ang_s22_line_edit.setText("2")
+        self.ang_s11_line_edit.setText("150")
+        self.ang_s22_line_edit.setText("-60")
 
     def make_path_layout(self):
         box = QtWidgets.QHBoxLayout()

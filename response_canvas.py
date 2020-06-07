@@ -58,10 +58,19 @@ class ResponseCanvas(FigureCanvasQTAgg):
         self.graph_data.set_interpolation_function(f)
 
     def draw_label(self, frequency, response):
+        middle_frequency = self.graph_data.frequencies[int(len(self.graph_data.frequencies)/2)]
+        cur_xlim = self.axes.get_xlim()
+        cur_ylim = self.axes.get_ylim()
+        cur_xrange = (cur_xlim[1] - cur_xlim[0]) * .5
+        cur_yrange = (cur_ylim[1] - cur_ylim[0]) * .5
         if self.picked_label is not None:
             self.picked_label.remove()
             self.picked_label = None
-        self.picked_label = self.axes.text(frequency + 800, response - 10,
+        if frequency > middle_frequency:
+            label_posx = frequency + cur_xrange/15
+        else:
+            label_posx = frequency - cur_xrange/2
+        self.picked_label = self.axes.text(label_posx, response - cur_yrange/15,
                                            str(round(frequency, 2)) + ', ' + str(round(response, 2)))
         self.picked_label.set_backgroundcolor('gray')
         self.picked_label.set_color('white')
@@ -141,14 +150,14 @@ class ResponseCanvas(FigureCanvasQTAgg):
             elif key == "down":
                 self.graph_data.specifications[self.picked_index] = self.graph_data.specifications[
                                                                         self.picked_index] - 1
-            elif key == "right":
+            elif key == "right" and self.picked_index < len(self.graph_data.frequencies) - 1:
                 newvalue = self.graph_data.frequencies[self.picked_index] + 10
                 if newvalue >= self.graph_data.frequencies[self.picked_index + 1]:
                     self.graph_data.frequencies[self.picked_index] = self.graph_data.frequencies[
-                                                                         self.picked_index + 1] + 0.1
+                                                                         self.picked_index + 1] - 0.1
                 else:
                     self.graph_data.frequencies[self.picked_index] = newvalue
-            elif key == "left":
+            elif key == "left" and self.picked_index > 0:
                 newvalue = self.graph_data.frequencies[self.picked_index] - 10
                 if newvalue <= self.graph_data.frequencies[self.picked_index - 1]:
                     self.graph_data.frequencies[self.picked_index] = self.graph_data.frequencies[
@@ -165,14 +174,14 @@ class ResponseCanvas(FigureCanvasQTAgg):
             elif key == "down":
                 self.graph_data.measurements_y[self.picked_index] = self.graph_data.measurements_y[
                                                                         self.picked_index] - 1
-            elif key == "right":
+            elif key == "right" and self.picked_index < len(self.graph_data.measurements_x)-1:
                 newvalue = self.graph_data.measurements_x[self.picked_index] + 10
                 if newvalue >= self.graph_data.measurements_x[self.picked_index + 1]:
                     self.graph_data.measurements_x[self.picked_index] = self.graph_data.measurements_x[
-                                                                            self.picked_index + 1] + 0.1
+                                                                            self.picked_index + 1] - 0.1
                 else:
                     self.graph_data.measurements_x[self.picked_index] = newvalue
-            elif key == "left":
+            elif key == "left" and self.picked_index > 0:
                 newvalue = self.graph_data.measurements_x[self.picked_index] - 10
                 if newvalue <= self.graph_data.measurements_x[self.picked_index - 1]:
                     self.graph_data.measurements_x[self.picked_index] = self.graph_data.measurements_x[
