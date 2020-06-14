@@ -10,7 +10,7 @@ class InputScreen(QtWidgets.QWidget):
     Defines graphical interface for entering response data for Insertion Loss, Group Delay and (I/O) Return Loss
     Retrieves InputData and passes it to the next screen for processing
     """
-    switch_window = QtCore.pyqtSignal(object)
+    switch_window = QtCore.pyqtSignal(object, list)
 
     def __init__(self):
         QtWidgets.QWidget.__init__(self)
@@ -26,6 +26,9 @@ class InputScreen(QtWidgets.QWidget):
         self.center_frequency_line_edit = QtWidgets.QLineEdit()
         self.setup_window()
 
+        self.measurements_path = None
+        self.measurements_label = None
+
         layout = QtWidgets.QVBoxLayout()
         layout.addLayout(self.make_center_frequency_input())
         layout.addLayout(self.make_bandwidth_input())
@@ -35,7 +38,7 @@ class InputScreen(QtWidgets.QWidget):
         tabs_widget.addTab(self.make_input_return_loss_tab(), "Input Return Loss")
         tabs_widget.addTab(self.make_output_return_loss_tab(), "Output Return Loss")
         layout.addWidget(tabs_widget, 1, QtCore.Qt.AlignHCenter)
-        layout.addWidget(self.make_finish_button(), 1, QtCore.Qt.AlignRight)
+        layout.addLayout(self.make_buttons_layout())
 
         self.set_content_debug()
         self.setLayout(layout)
@@ -63,6 +66,30 @@ class InputScreen(QtWidgets.QWidget):
         qt_rectangle = self.frameGeometry()
         qt_rectangle.moveCenter(center_point)
         self.move(qt_rectangle.topLeft())
+
+    def make_buttons_layout(self):
+        box = QtWidgets.QHBoxLayout()
+        self.measurements_label = QtWidgets.QLabel('Measurements: None')
+        self.make_measurements_button()
+        box.addWidget(self.load_measurements_button, 1, QtCore.Qt.AlignLeft)
+        box.addWidget(self.measurements_label, 1, QtCore.Qt.AlignCenter)
+        box.addWidget(self.make_finish_button(), 1, QtCore.Qt.AlignRight)
+        return box
+
+    def select_folder(self):
+        if self.measurements_path is None:
+            file_dialog = QtWidgets.QFileDialog(self)
+            file_dialog.setNameFilter("Text files (*.txt)")
+            file_dialog.setViewMode(QtWidgets.QFileDialog.List)
+
+            if file_dialog.exec_():
+                self.measurements_path = file_dialog.selectedFiles()[0]
+                self.load_measurements_button.setText("Remove measurements file")
+                self.measurements_label.setText("Measurements: " + self.measurements_path)
+        else:
+            self.load_measurements_button.setText("Load measurements file")
+            self.measurements_path = None
+            self.measurements_label.setText("Measurements: None")
 
     def make_center_frequency_input(self):
         box = QtWidgets.QHBoxLayout()
@@ -159,7 +186,22 @@ class InputScreen(QtWidgets.QWidget):
         button.clicked.connect(self.finish)
         return button
 
+    def make_measurements_button(self):
+        self.load_measurements_button = QtWidgets.QPushButton('Load measurements file')
+        self.load_measurements_button.clicked.connect(self.select_folder)
+
+    def read_measurements_file(self):
+        measurements_file = open(self.measurements_path, "r")
+        text = measurements_file.readlines()
+        measurements_file.close()
+        return text
+
     def finish(self):
+        if self.measurements_path is None:
+            measurements_text = []
+        else:
+            measurements_text = self.read_measurements_file()
+
         # TODO handle empty inputs
         center_frequency = self.center_frequency_line_edit.text()
         bandwidth = self.bandwidth_line_edit.text()
@@ -175,7 +217,7 @@ class InputScreen(QtWidgets.QWidget):
                                            insertion_loss_outband, group_delay_inband, group_delay_outband,
                                            input_return,
                                            output_return)
-        self.switch_window.emit(input_data)
+        self.switch_window.emit(input_data, measurements_text)
 
 
 # TODO add confirmation dialog when clicking the x button above
@@ -186,23 +228,23 @@ class GenerateScreen(QtWidgets.QWidget):
     """
     switch_window = QtCore.pyqtSignal(object)
 
-    def __init__(self, input_data):
+    def __init__(self, input_data, measurement_text):
         QtWidgets.QWidget.__init__(self)
         self.setWindowTitle('Generate S-parameters')
 
         # TODO handle empty inputs
         if input_data is not None:
-            self.numerical_data = data_parser.make_plot_data(input_data)
+            self.numerical_data = data_parser.make_plot_data(input_data, measurement_text)
             il = self.numerical_data.insertion_loss
             gd = self.numerical_data.group_delay
             irl = self.numerical_data.input_return_loss
             orl = self.numerical_data.output_return_loss
             self.graph_data_list = [il, gd, irl, orl]
         else:
-            il = models.GraphData("IL", "dB", [[1, 2, 3, 4], [1, 2, 3, 4]])
-            gd = models.GraphData("IL", "dB", [[1, 2, 3, 4], [1, 2, 3, 4]])
-            irl = models.GraphData("IL", "dB", [[1, 2, 3, 4], [1, 2, 3, 4]])
-            orl = models.GraphData("IL", "dB", [[1, 2, 3, 4], [1, 2, 3, 4]])
+            il = models.GraphData("IL", "dB", [[1, 2, 3, 4], [1, 2, 3, 4]], None)
+            gd = models.GraphData("IL", "dB", [[1, 2, 3, 4], [1, 2, 3, 4]], None)
+            irl = models.GraphData("IL", "dB", [[1, 2, 3, 4], [1, 2, 3, 4]], None)
+            orl = models.GraphData("IL", "dB", [[1, 2, 3, 4], [1, 2, 3, 4]], None)
             self.graph_data_list = [il, gd, irl, orl]
 
         self.output_return_loss_canvas = response_canvas.ResponseCanvas(self.graph_data_list[3])
@@ -485,7 +527,7 @@ class SaveScreen(QtWidgets.QDialog):
         real_file.write(" ".join([str(elem) for elem in self.numerical_data.input_return_loss.measurements_x]) + "\n")
         real_file.write(" ".join([str(elem) for elem in self.numerical_data.input_return_loss.measurements_y]) + "\n")
         real_file.write(" ".join([str(elem) for elem in self.numerical_data.output_return_loss.measurements_x]) + "\n")
-        real_file.write(" ".join([str(elem) for elem in self.numerical_data.output_return_loss.measurements_y]))
+        real_file.write(" ".join([str(elem) for elem in self.numerical_data.output_return_loss.measurements_y]) + "\n")
 
     def save_sparams(self, lines):
         s_params_location = self.path + "/" + self.filter_name + "-sparams.s2p"

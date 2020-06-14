@@ -32,14 +32,15 @@ class NumericalData:
     and 3 numbers associated with the central frequency, bandwidth and loss at central frequency
     """
 
-    def __init__(self, cf, bw, lac, il_plot, gd_plot, irl_plot, orl_plot):
+    def __init__(self, cf, bw, lac, il_plot, gd_plot, irl_plot, orl_plot, il_mes=None, gd_mes=None, irl_mes=None,
+                 orl_mes=None):
         self.center_frequency = cf
         self.bandwidth = bw
         self.loss_at_center = lac
-        self.insertion_loss = GraphData('Insertion Loss', 'dB', il_plot)
-        self.group_delay = GraphData('Group Delay', 'ns', gd_plot)
-        self.input_return_loss = GraphData('Input Return Loss', 'dB', irl_plot)
-        self.output_return_loss = GraphData("Output Return Loss", 'dB', orl_plot)
+        self.insertion_loss = GraphData('Insertion Loss', 'dB', il_plot, il_mes)
+        self.group_delay = GraphData('Group Delay', 'ns', gd_plot, gd_mes)
+        self.input_return_loss = GraphData('Input Return Loss', 'dB', irl_plot, irl_mes)
+        self.output_return_loss = GraphData("Output Return Loss", 'dB', orl_plot, orl_mes)
 
     def set_graph_datas(self, il, gd, irl, orl):
         self.insertion_loss = il
@@ -53,12 +54,16 @@ class GraphData:
     Wraps plotting data used in the graphs and tabs of GenerateScreen
     """
 
-    def __init__(self, name, unit, plot):
+    def __init__(self, name, unit, specs, mes):
         self.name = name
         self.unit = unit
-        self.frequencies = plot[0]
-        self.specifications = plot[1]
-        self.measurements_x, self.measurements_y = self.generate_measurements()
+        self.frequencies = specs[0]
+        self.specifications = specs[1]
+        if mes is None:
+            self.measurements_x, self.measurements_y = self.generate_measurements()
+        else:
+            self.measurements_x = mes[0]
+            self.measurements_y = mes[1]
         self.interpolation_function = None
 
     def set_interpolation_function(self, f):
@@ -178,10 +183,10 @@ class SparamsData:
         gd_end_freq = self.numerical_data.group_delay.measurements_x[-1]
         gd_end_index = frequencies.index(take_closest(gd_end_freq, frequencies))
         gd_function = self.numerical_data.group_delay.interpolation_function
-        gd_y = gd_function(frequencies[gd_start_index:gd_end_index+1])
+        gd_y = gd_function(frequencies[gd_start_index:gd_end_index + 1])
         for i in range(gd_start_index):
             np.insert(gd_y, 0, gd_function(gd_start_freq))
-        for i in range(gd_end_index+1, len(frequencies)):
+        for i in range(gd_end_index + 1, len(frequencies)):
             np.append(gd_y, gd_function(gd_end_freq))
         phase = cumtrapz(gd_y, initial=0)
 

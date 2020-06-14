@@ -49,7 +49,21 @@ def get_numerical_data_from_input_data(input_data):
            group_delay_percent, group_delay_range, input_return_range, output_return_range
 
 
-def make_plot_data(input_data):
+def parse_loaded_measurements(measurement_text):
+    """
+    Parses the list of lines in loaded measurements file to x and y vectors for plotting the four measurements
+    :param measurement_text: list of strings
+    :return: one array of type [measurements_x, measurements y] for each graph
+    """
+    il_mes = [list(map(float, measurement_text[0][:-1].split(" "))), list(map(float, measurement_text[1][:-1].split(" ")))]
+    gd_mes = [list(map(float, measurement_text[2][:-1].split(" "))), list(map(float, measurement_text[3][:-1].split(" ")))]
+    irl_mes = [list(map(float, measurement_text[4][:-1].split(" "))), list(map(float, measurement_text[5][:-1].split(" ")))]
+    orl_mes = [list(map(float, measurement_text[6][:-1].split(" "))), list(map(float, measurement_text[7][:-1].split(" ")))]
+
+    return il_mes, gd_mes, irl_mes, orl_mes
+
+
+def make_plot_data(input_data, measurement_text):
     """
     Transforms given InputData object into GraphData objects for each of the 4 graphs
     :param input_data: InputData object containing the text input
@@ -64,7 +78,12 @@ def make_plot_data(input_data):
     irl_plot = get_plot_returnloss(cf, irl_range)
     orl_plot = get_plot_returnloss(cf, orl_range)
 
-    return models.NumericalData(cf, bw, loss_cf, il_plot, gd_plot, irl_plot, orl_plot)
+    if not measurement_text:
+        return models.NumericalData(cf, bw, loss_cf, il_plot, gd_plot, irl_plot, orl_plot)
+    else:
+        il_mes, gd_mes, irl_mes, orl_mes = parse_loaded_measurements(measurement_text)
+        return models.NumericalData(cf, bw, loss_cf, il_plot, gd_plot, irl_plot, orl_plot, il_mes, gd_mes, irl_mes,
+                                    orl_mes)
 
 
 def get_plot_insertionloss_groupdelay(center_frequency, bandwidth, percent_contents, range_contents, loss_center=None):

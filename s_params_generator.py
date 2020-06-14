@@ -15,8 +15,8 @@ class WindowController:
         self.input_screen.switch_window.connect(self.show_generate_screen)
         self.input_screen.show()
 
-    def show_generate_screen(self, input_data):
-        self.generate_screen = screens.GenerateScreen(input_data)
+    def show_generate_screen(self, input_data, measurements_text):
+        self.generate_screen = screens.GenerateScreen(input_data, measurements_text)
         self.generate_screen.switch_window.connect(self.show_save_screen)
         self.input_screen.close()
         self.generate_screen.showMaximized()
