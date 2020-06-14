@@ -466,16 +466,29 @@ class SaveScreen(QtWidgets.QDialog):
         self.save_sparams(sparams_lines)
 
     def save_responses(self):
-        response_location = self.path + "/" + self.filter_name + "-responses.txt"
-        response_file = open(response_location, "w")
+        ideal_location = self.path + "/" + self.filter_name + "-ideal.txt"
+        ideal_file = open(ideal_location, "w")
+        ideal_text_data = data_parser.make_text_data(self.numerical_data)
+        ideal_file.write("\n".join(ideal_text_data))
+        ideal_file.close()
 
-        response_text_data = data_parser.make_text_data(self.numerical_data)
-        response_file.write("\n".join(response_text_data))
+        real_location = self.path + "/" + self.filter_name + "-real.txt"
+        real_file = open(real_location, "w")
+        self.write_real(real_file)
+        real_file.close()
 
-        response_file.close()
+    def write_real(self, real_file):
+        real_file.write(" ".join([str(elem) for elem in self.numerical_data.insertion_loss.measurements_x]) + "\n")
+        real_file.write(" ".join([str(elem) for elem in self.numerical_data.insertion_loss.measurements_y]) + "\n")
+        real_file.write(" ".join([str(elem) for elem in self.numerical_data.group_delay.measurements_x]) + "\n")
+        real_file.write(" ".join([str(elem) for elem in self.numerical_data.group_delay.measurements_y]) + "\n")
+        real_file.write(" ".join([str(elem) for elem in self.numerical_data.input_return_loss.measurements_x]) + "\n")
+        real_file.write(" ".join([str(elem) for elem in self.numerical_data.input_return_loss.measurements_y]) + "\n")
+        real_file.write(" ".join([str(elem) for elem in self.numerical_data.output_return_loss.measurements_x]) + "\n")
+        real_file.write(" ".join([str(elem) for elem in self.numerical_data.output_return_loss.measurements_y]))
 
     def save_sparams(self, lines):
-        s_params_location = self.path + "/" + self.filter_name + "-s_params.s2p"
+        s_params_location = self.path + "/" + self.filter_name + "-sparams.s2p"
         s_params_file = open(s_params_location, "w")
 
         s_params_file.write("! Date & Time: " + str(datetime.now()) + "\n")
