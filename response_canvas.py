@@ -46,6 +46,7 @@ class ResponseCanvas(FigureCanvasQTAgg):
         if self.specs is not None:
             self.specs.remove()
         self.specs, = self.axes.plot(self.graph_data.frequencies, self.graph_data.specifications, 'ob-', picker=2)
+        self.specs.set_label('_line0')
 
     def draw_measurements(self):
         if self.mes_data is not None and self.mes_curve is not None:
