@@ -1,5 +1,6 @@
 from PyQt5 import QtCore
 import numpy as np
+import math
 from scipy.special import binom
 from scipy.integrate import cumtrapz
 
@@ -168,7 +169,7 @@ class SparamsData:
                       self.numerical_data.output_return_loss.frequencies
         frequencies.sort()
         frequencies = list(dict.fromkeys(frequencies))
-        frequencies = list(np.linspace(frequencies[0], frequencies[-1], 500))
+        frequencies = list(np.linspace(frequencies[0], frequencies[-1], 3000))
 
         irl_start_freq = self.numerical_data.input_return_loss.measurements_x[0]
         irl_end_freq = self.numerical_data.input_return_loss.measurements_x[-1]
@@ -188,7 +189,8 @@ class SparamsData:
             np.insert(gd_y, 0, gd_function(gd_start_freq))
         for i in range(gd_end_index + 1, len(frequencies)):
             np.append(gd_y, gd_function(gd_end_freq))
-        phase = cumtrapz(gd_y, initial=0)
+        phase = cumtrapz(gd_y, frequencies, initial=0)
+        phase = [elem / 2.8 for elem in phase]
 
         orl_start_freq = self.numerical_data.output_return_loss.measurements_x[0]
         orl_end_freq = self.numerical_data.output_return_loss.measurements_x[-1]

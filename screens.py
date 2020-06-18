@@ -51,9 +51,9 @@ class InputScreen(QtWidgets.QWidget):
         self.insertionloss_inband_text_edit.setText(il_percent)
         il_range = "2.520 - 8.400	-120\n10.70 - 11.50	-100\n17.30 - 17.55	-100\n17.55 - 17.80	-80\n22    - 21.20	-60\n24.75 - 25.25	-60\n27.00 - 30.00	-60\n30.00 - 31.00	-50\n37.50 - 40.00	-50\n40.00 - 48.00	-40"
         self.insertionloss_outofband_text_edit.setText(il_range)
-        gd_percent = "50%     2\n90%     6\n100%	12\n150%	18\n200%	25"
+        gd_percent = "50%     2\n90%     6\n100%	12\n150%	18\n200%	20"
         self.groupdelay_inband_text_edit.setText(gd_percent)
-        gd_range = "2.520 - 8.400	60\n40.00 - 48.00   80"
+        gd_range = "2.520 - 8.400	30\n40.00 - 48.00   20"
         self.groupdelay_outofband_text_edit.setText(gd_range)
         irl = "2.520 - 8.400	-20\n10.70 - 11.50	-20\n17.30 - 17.55	-80\n17.55 - 17.80	-100\n22    - 21.20	-80\n24.75 - 25.25	-60\n27.00 - 30.00	-60\n30.00 - 31.00	-50\n37.50 - 40.00	-50\n40.00 - 48.00	-20"
         self.inputreturnloss_text_edit.setText(irl)
