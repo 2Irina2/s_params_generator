@@ -1,6 +1,5 @@
 from PyQt5 import QtCore
 import numpy as np
-import math
 from scipy.special import binom
 from scipy.integrate import cumtrapz
 
@@ -151,7 +150,8 @@ class GraphData:
 
 class SparamsData:
 
-    def __init__(self, numerical_data, absolute_losses, ang_s11, ang_s22, mag_s12, ang_s12):
+    def __init__(self, numerical_data, absolute_losses, ang_s11, ang_s22, mag_s12, ang_s12, conf):
+        self.conf = conf
         self.numerical_data = numerical_data
         self.absolute_losses = float(absolute_losses)
         self.ang_s11 = ang_s11
@@ -169,7 +169,7 @@ class SparamsData:
                       self.numerical_data.output_return_loss.frequencies
         frequencies.sort()
         frequencies = list(dict.fromkeys(frequencies))
-        frequencies = list(np.linspace(frequencies[0], frequencies[-1], 3000))
+        frequencies = list(np.linspace(frequencies[0], frequencies[-1], self.conf.getint('number_of_lines')))
 
         irl_start_freq = self.numerical_data.input_return_loss.measurements_x[0]
         irl_end_freq = self.numerical_data.input_return_loss.measurements_x[-1]
@@ -190,7 +190,7 @@ class SparamsData:
         for i in range(gd_end_index + 1, len(frequencies)):
             np.append(gd_y, gd_function(gd_end_freq))
         phase = cumtrapz(gd_y, frequencies, initial=0)
-        phase = [elem / 2.8 for elem in phase]
+        phase = [elem / self.conf.getfloat('group_delay_scaling') for elem in phase]
 
         orl_start_freq = self.numerical_data.output_return_loss.measurements_x[0]
         orl_end_freq = self.numerical_data.output_return_loss.measurements_x[-1]

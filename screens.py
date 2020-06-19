@@ -228,7 +228,7 @@ class GenerateScreen(QtWidgets.QWidget):
     """
     switch_window = QtCore.pyqtSignal(object)
 
-    def __init__(self, input_data, measurement_text):
+    def __init__(self, input_data, measurement_text, conf):
         QtWidgets.QWidget.__init__(self)
         self.setWindowTitle('Generate S-parameters')
 
@@ -247,10 +247,10 @@ class GenerateScreen(QtWidgets.QWidget):
             orl = models.GraphData("IL", "dB", [[1, 2, 3, 4], [1, 2, 3, 4]], None)
             self.graph_data_list = [il, gd, irl, orl]
 
-        self.output_return_loss_canvas = response_canvas.ResponseCanvas(self.graph_data_list[3])
-        self.input_return_loss_canvas = response_canvas.ResponseCanvas(self.graph_data_list[2])
-        self.group_delay_canvas = response_canvas.ResponseCanvas(self.graph_data_list[1])
-        self.insertion_loss_canvas = response_canvas.ResponseCanvas(self.graph_data_list[0])
+        self.insertion_loss_canvas = response_canvas.ResponseCanvas(self.graph_data_list[0], conf['insertion_loss'])
+        self.group_delay_canvas = response_canvas.ResponseCanvas(self.graph_data_list[1], conf['group_delay'])
+        self.input_return_loss_canvas = response_canvas.ResponseCanvas(self.graph_data_list[2], conf['input_return_loss'])
+        self.output_return_loss_canvas = response_canvas.ResponseCanvas(self.graph_data_list[3], conf['output_return_loss'])
 
         layout = QtWidgets.QHBoxLayout()
         layout.addLayout(self.make_graphs_layout(), 4)
@@ -334,10 +334,11 @@ class SaveScreen(QtWidgets.QDialog):
     restart_signal = QtCore.pyqtSignal()
     cancel_signal = QtCore.pyqtSignal()
 
-    def __init__(self, numerical_data, parent=None):
+    def __init__(self, numerical_data, conf, parent=None):
         super(SaveScreen, self).__init__(parent)
         self.setWindowTitle("Save S-parameters and response")
         self.numerical_data = numerical_data
+        self.conf = conf
         layout = QtWidgets.QVBoxLayout()
 
         self.filter_name_line_edit = QtWidgets.QLineEdit()
@@ -503,7 +504,7 @@ class SaveScreen(QtWidgets.QDialog):
         ang_s22 = self.ang_s22_line_edit.text()
         mag_s12 = self.mag_s12_line_edit.text()
         ang_s12 = self.ang_s12_line_edit.text()
-        sparams_data = models.SparamsData(self.numerical_data, absolute_losses, ang_s11, ang_s22, mag_s12, ang_s12)
+        sparams_data = models.SparamsData(self.numerical_data, absolute_losses, ang_s11, ang_s22, mag_s12, ang_s12, self.conf)
         sparams_lines = sparams_data.compute_parameters()
         self.save_sparams(sparams_lines)
 
