@@ -106,7 +106,6 @@ class ResponseCanvas(FigureCanvasQTAgg):
             self.draw()
         self.pickEvent = False
         self.active_tab.emit(self.graph_data.name)
-        print("active_tab emitted")
 
     def onpick(self, event):
         if event.mouseevent.button == MouseButton.LEFT:

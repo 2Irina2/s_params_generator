@@ -220,7 +220,6 @@ class InputScreen(QtWidgets.QWidget):
         self.switch_window.emit(input_data, measurements_text)
 
 
-# TODO fix "only size-1 arrays can be converted to Python scalars"
 class GenerateScreen(QtWidgets.QWidget):
     """
     Screen for adjusting and visualizing the frequency response graphs
