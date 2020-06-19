@@ -220,7 +220,6 @@ class InputScreen(QtWidgets.QWidget):
         self.switch_window.emit(input_data, measurements_text)
 
 
-# TODO add confirmation dialog when clicking the x button above
 # TODO fix "only size-1 arrays can be converted to Python scalars"
 class GenerateScreen(QtWidgets.QWidget):
     """
@@ -299,7 +298,7 @@ class GenerateScreen(QtWidgets.QWidget):
         self.tabs = QtWidgets.QTabWidget()
         for graph in self.graph_data_list:
             self.tabs.addTab(self.make_tab(graph), graph.name)
-        self.tabs.setMinimumWidth(510)  # TODO find a better way to scale the tab on the screen
+        self.tabs.setMinimumWidth(510)
 
         panel.addWidget(self.tabs, 19, QtCore.Qt.AlignJustify)
         panel.addWidget(button_generate, 1, QtCore.Qt.AlignVCenter)
@@ -338,6 +337,18 @@ class GenerateScreen(QtWidgets.QWidget):
         tabs_list = ["Insertion Loss", "Group Delay", "Input Return Loss", "Output Return Loss"]
         self.active_tab_index = tabs_list.index(name)
         self.tabs.setCurrentIndex(self.active_tab_index)
+
+    def closeEvent(self, event):
+        msg_box = QtWidgets.QMessageBox()
+        msg_box.setWindowTitle("Quit")
+        msg_box.setText("Are you sure you want to quit application?")
+        msg_box.setInformativeText("Data will not be saved.")
+        msg_box.setStandardButtons(QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)
+        button_reply = msg_box.exec()
+        if button_reply == QtWidgets.QMessageBox.Yes:
+            event.accept()
+        else:
+            event.ignore()
 
     def generate(self):
         il = self.insertion_loss_canvas.graph_data
