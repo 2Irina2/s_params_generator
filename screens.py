@@ -214,9 +214,9 @@ class InputScreen(QtWidgets.QWidget):
         output_return = self.outputreturnloss_text_edit.toPlainText()
 
         input_data = models.InputData(center_frequency, bandwidth, loss_center_frequency, insertion_loss_inband,
-                                           insertion_loss_outband, group_delay_inband, group_delay_outband,
-                                           input_return,
-                                           output_return)
+                                      insertion_loss_outband, group_delay_inband, group_delay_outband,
+                                      input_return,
+                                      output_return)
         self.switch_window.emit(input_data, measurements_text)
 
 
@@ -247,15 +247,28 @@ class GenerateScreen(QtWidgets.QWidget):
             orl = models.GraphData("IL", "dB", [[1, 2, 3, 4], [1, 2, 3, 4]], None)
             self.graph_data_list = [il, gd, irl, orl]
 
-        self.insertion_loss_canvas = response_canvas.ResponseCanvas(self.graph_data_list[0], conf['insertion_loss'])
-        self.group_delay_canvas = response_canvas.ResponseCanvas(self.graph_data_list[1], conf['group_delay'])
-        self.input_return_loss_canvas = response_canvas.ResponseCanvas(self.graph_data_list[2], conf['input_return_loss'])
-        self.output_return_loss_canvas = response_canvas.ResponseCanvas(self.graph_data_list[3], conf['output_return_loss'])
+        self.make_canvases(conf)
 
         layout = QtWidgets.QHBoxLayout()
         layout.addLayout(self.make_graphs_layout(), 4)
         layout.addLayout(self.make_tabs_layout(), 1)
         self.setLayout(layout)
+
+    def make_canvases(self, conf):
+        self.insertion_loss_canvas = response_canvas.ResponseCanvas(self.graph_data_list[0], conf['insertion_loss'])
+        self.insertion_loss_canvas.graph_changed.connect(self.update_tab)
+        self.insertion_loss_canvas.active_tab.connect(self.activate_tab)
+        self.group_delay_canvas = response_canvas.ResponseCanvas(self.graph_data_list[1], conf['group_delay'])
+        self.group_delay_canvas.graph_changed.connect(self.update_tab)
+        self.group_delay_canvas.active_tab.connect(self.activate_tab)
+        self.input_return_loss_canvas = response_canvas.ResponseCanvas(self.graph_data_list[2],
+                                                                       conf['input_return_loss'])
+        self.input_return_loss_canvas.graph_changed.connect(self.update_tab)
+        self.input_return_loss_canvas.active_tab.connect(self.activate_tab)
+        self.output_return_loss_canvas = response_canvas.ResponseCanvas(self.graph_data_list[3],
+                                                                        conf['output_return_loss'])
+        self.output_return_loss_canvas.graph_changed.connect(self.update_tab)
+        self.output_return_loss_canvas.active_tab.connect(self.activate_tab)
 
     def make_graphs_layout(self):
         graphs = QtWidgets.QGridLayout()
@@ -278,17 +291,17 @@ class GenerateScreen(QtWidgets.QWidget):
         return layout
 
     def make_tabs_layout(self):
-        # TODO add listener for graph_data modifications
+        self.active_tab_index = 0
         panel = QtWidgets.QVBoxLayout()
         button_generate = QtWidgets.QPushButton('Generate')
         button_generate.clicked.connect(self.generate)
 
-        tabs = QtWidgets.QTabWidget()
+        self.tabs = QtWidgets.QTabWidget()
         for graph in self.graph_data_list:
-            tabs.addTab(self.make_tab(graph), graph.name)
-        tabs.setMinimumWidth(510)  # TODO find a better way to scale the tab on the screen
+            self.tabs.addTab(self.make_tab(graph), graph.name)
+        self.tabs.setMinimumWidth(510)  # TODO find a better way to scale the tab on the screen
 
-        panel.addWidget(tabs, 19, QtCore.Qt.AlignJustify)
+        panel.addWidget(self.tabs, 19, QtCore.Qt.AlignJustify)
         panel.addWidget(button_generate, 1, QtCore.Qt.AlignVCenter)
         return panel
 
@@ -315,6 +328,16 @@ class GenerateScreen(QtWidgets.QWidget):
 
         tab.setLayout(tables)
         return tab
+
+    def update_tab(self, graph_data):
+        self.tabs.removeTab(self.active_tab_index)
+        self.tabs.insertTab(self.active_tab_index, self.make_tab(graph_data), graph_data.name)
+        self.tabs.setCurrentIndex(self.active_tab_index)
+
+    def activate_tab(self, name):
+        tabs_list = ["Insertion Loss", "Group Delay", "Input Return Loss", "Output Return Loss"]
+        self.active_tab_index = tabs_list.index(name)
+        self.tabs.setCurrentIndex(self.active_tab_index)
 
     def generate(self):
         il = self.insertion_loss_canvas.graph_data
@@ -504,7 +527,8 @@ class SaveScreen(QtWidgets.QDialog):
         ang_s22 = self.ang_s22_line_edit.text()
         mag_s12 = self.mag_s12_line_edit.text()
         ang_s12 = self.ang_s12_line_edit.text()
-        sparams_data = models.SparamsData(self.numerical_data, absolute_losses, ang_s11, ang_s22, mag_s12, ang_s12, self.conf)
+        sparams_data = models.SparamsData(self.numerical_data, absolute_losses, ang_s11, ang_s22, mag_s12, ang_s12,
+                                          self.conf)
         sparams_lines = sparams_data.compute_parameters()
         self.save_sparams(sparams_lines)
 

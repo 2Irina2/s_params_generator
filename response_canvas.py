@@ -1,4 +1,5 @@
 import matplotlib
+from PyQt5.QtCore import pyqtSignal
 from matplotlib.backend_bases import MouseButton
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
 from matplotlib.figure import Figure
@@ -17,6 +18,9 @@ class ResponseCanvas(FigureCanvasQTAgg):
         - arrow keys for point adjusting after picking
         - A/D keys for navigation between points
     """
+
+    graph_changed = pyqtSignal(object)
+    active_tab = pyqtSignal(str)
 
     def __init__(self, graph_data, conf):
         figure = Figure()
@@ -101,6 +105,8 @@ class ResponseCanvas(FigureCanvasQTAgg):
                 self.picked_label = None
             self.draw()
         self.pickEvent = False
+        self.active_tab.emit(self.graph_data.name)
+        print("active_tab emitted")
 
     def onpick(self, event):
         if event.mouseevent.button == MouseButton.LEFT:
@@ -201,6 +207,7 @@ class ResponseCanvas(FigureCanvasQTAgg):
         self.draw_label(freq, resp)
         self.set_axes_limits()
         self.draw()
+        self.graph_changed.emit(self.graph_data)
 
     def onkey(self, event):
         if event.key == ' ':
