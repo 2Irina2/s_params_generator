@@ -18,9 +18,10 @@ class ResponseCanvas(FigureCanvasQTAgg):
         - A/D keys for navigation between points
     """
 
-    def __init__(self, graph_data):
+    def __init__(self, graph_data, conf):
         figure = Figure()
         super(ResponseCanvas, self).__init__(figure)
+        self.conf = conf
         self.specs = None
         self.mes_data = None
         self.mes_curve = None
@@ -45,7 +46,7 @@ class ResponseCanvas(FigureCanvasQTAgg):
     def draw_specifications(self):
         if self.specs is not None:
             self.specs.remove()
-        self.specs, = self.axes.plot(self.graph_data.frequencies, self.graph_data.specifications, 'ob-', picker=2)
+        self.specs, = self.axes.plot(self.graph_data.frequencies, self.graph_data.specifications, 'ob-', picker=self.conf.getint('picker_precision'))
         self.specs.set_label('_line0')
 
     def draw_measurements(self):
@@ -53,7 +54,7 @@ class ResponseCanvas(FigureCanvasQTAgg):
             self.mes_data.remove()
             self.mes_curve.remove()
         f = interpolate.interp1d(self.graph_data.measurements_x, self.graph_data.measurements_y, kind='quadratic')
-        xf = np.linspace(self.graph_data.measurements_x[0], self.graph_data.measurements_x[-1], 1000)
+        xf = np.linspace(self.graph_data.measurements_x[0], self.graph_data.measurements_x[-1], self.conf.getint('interpolation_domain_size'))
         self.mes_data, = self.axes.plot(self.graph_data.measurements_x, self.graph_data.measurements_y, 'ro', picker=2)
         self.mes_curve, = self.axes.plot(xf, f(xf), 'r-')
         self.graph_data.set_interpolation_function(f)
@@ -119,7 +120,7 @@ class ResponseCanvas(FigureCanvasQTAgg):
         else:
             self.adjust(event.button)
 
-    def zoom(self, event, base_scale=1.1):
+    def zoom(self, event):
         # get the current x and y limits
         cur_xlim = self.axes.get_xlim()
         cur_ylim = self.axes.get_ylim()
@@ -127,6 +128,8 @@ class ResponseCanvas(FigureCanvasQTAgg):
         cur_yrange = (cur_ylim[1] - cur_ylim[0]) * .5
         xdata = event.xdata  # get event x location
         ydata = event.ydata  # get event y location
+
+        base_scale = self.conf.getfloat('zoom_sensitivity')
         if event.button == 'up':
             # deal with zoom in
             scale_factor = 1 / base_scale
@@ -147,19 +150,19 @@ class ResponseCanvas(FigureCanvasQTAgg):
         if self.picked_artist == "_line0":
             if key == "up":
                 self.graph_data.specifications[self.picked_index] = self.graph_data.specifications[
-                                                                        self.picked_index] + 1
+                                                                        self.picked_index] + self.conf.getfloat('specifications_adjust_y')
             elif key == "down":
                 self.graph_data.specifications[self.picked_index] = self.graph_data.specifications[
-                                                                        self.picked_index] - 1
+                                                                        self.picked_index] - self.conf.getfloat('specifications_adjust_y')
             elif key == "right" and self.picked_index < len(self.graph_data.frequencies) - 1:
-                newvalue = self.graph_data.frequencies[self.picked_index] + 10
+                newvalue = self.graph_data.frequencies[self.picked_index] + self.conf.getfloat('specifications_adjust_x')
                 if newvalue >= self.graph_data.frequencies[self.picked_index + 1]:
                     self.graph_data.frequencies[self.picked_index] = self.graph_data.frequencies[
                                                                          self.picked_index + 1] - 0.1
                 else:
                     self.graph_data.frequencies[self.picked_index] = newvalue
             elif key == "left" and self.picked_index > 0:
-                newvalue = self.graph_data.frequencies[self.picked_index] - 10
+                newvalue = self.graph_data.frequencies[self.picked_index] - self.conf.getfloat('specifications_adjust_x')
                 if newvalue <= self.graph_data.frequencies[self.picked_index - 1]:
                     self.graph_data.frequencies[self.picked_index] = self.graph_data.frequencies[
                                                                          self.picked_index - 1] + 0.1
@@ -171,19 +174,19 @@ class ResponseCanvas(FigureCanvasQTAgg):
         elif self.picked_artist == "_line1":
             if key == "up":
                 self.graph_data.measurements_y[self.picked_index] = self.graph_data.measurements_y[
-                                                                        self.picked_index] + 1
+                                                                        self.picked_index] + self.conf.getfloat('measurements_adjust_y')
             elif key == "down":
                 self.graph_data.measurements_y[self.picked_index] = self.graph_data.measurements_y[
-                                                                        self.picked_index] - 1
+                                                                        self.picked_index] - self.conf.getfloat('measurements_adjust_y')
             elif key == "right" and self.picked_index < len(self.graph_data.measurements_x)-1:
-                newvalue = self.graph_data.measurements_x[self.picked_index] + 10
+                newvalue = self.graph_data.measurements_x[self.picked_index] + self.conf.getfloat('measurements_adjust_x')
                 if newvalue >= self.graph_data.measurements_x[self.picked_index + 1]:
                     self.graph_data.measurements_x[self.picked_index] = self.graph_data.measurements_x[
                                                                             self.picked_index + 1] - 0.1
                 else:
                     self.graph_data.measurements_x[self.picked_index] = newvalue
             elif key == "left" and self.picked_index > 0:
-                newvalue = self.graph_data.measurements_x[self.picked_index] - 10
+                newvalue = self.graph_data.measurements_x[self.picked_index] - self.conf.getfloat('measurements_adjust_x')
                 if newvalue <= self.graph_data.measurements_x[self.picked_index - 1]:
                     self.graph_data.measurements_x[self.picked_index] = self.graph_data.measurements_x[
                                                                             self.picked_index - 1] + 0.1
