@@ -2,6 +2,9 @@ import io
 import models
 
 
+def take_closest(num, collection):
+    return min(collection, key=lambda x: abs(x - num))
+
 #################################### InputData to NumericalData #############################################
 
 def get_numerical_data_from_text(text, negative=-1):
@@ -255,8 +258,8 @@ def get_percent_and_range(center_frequency, bandwidth, plot, loss_center=None):
     frequencies = plot[0]
     response = plot[1]
 
-    min_percent_ind = frequencies.index(center_frequency - bandwidth)
-    max_percent_ind = frequencies.index(center_frequency + bandwidth)
+    min_percent_ind = frequencies.index(take_closest(center_frequency - bandwidth, frequencies))
+    max_percent_ind = frequencies.index(take_closest(center_frequency + bandwidth, frequencies))
     percent_plot = (frequencies[min_percent_ind:max_percent_ind + 1], response[min_percent_ind:max_percent_ind + 1])
     range_plot = (frequencies[:min_percent_ind] + frequencies[max_percent_ind + 1:],
                   response[:min_percent_ind] + response[max_percent_ind + 1:])

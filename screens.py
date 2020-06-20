@@ -543,16 +543,16 @@ class SaveScreen(QtWidgets.QDialog):
         self.save_sparams(sparams_lines)
 
     def save_responses(self):
+        real_location = self.path + "/" + self.filter_name + "-real.txt"
+        real_file = open(real_location, "w")
+        self.write_real(real_file)
+        real_file.close()
+
         ideal_location = self.path + "/" + self.filter_name + "-ideal.txt"
         ideal_file = open(ideal_location, "w")
         ideal_text_data = data_parser.make_text_data(self.numerical_data)
         ideal_file.write("\n".join(ideal_text_data))
         ideal_file.close()
-
-        real_location = self.path + "/" + self.filter_name + "-real.txt"
-        real_file = open(real_location, "w")
-        self.write_real(real_file)
-        real_file.close()
 
     def write_real(self, real_file):
         real_file.write(" ".join([str(elem) for elem in self.numerical_data.insertion_loss.measurements_x]) + "\n")
