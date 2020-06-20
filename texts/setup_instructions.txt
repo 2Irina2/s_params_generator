@@ -1,3 +1,5 @@
+install python version 3
+
 pip install pyqt5
 pip install matplotlib
 pip install scipy
