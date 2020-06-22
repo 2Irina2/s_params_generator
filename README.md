@@ -9,7 +9,7 @@ The `configurations.ini` file is a configuration file for several parameters tha
 
 Graph controls: 
 * click on point to select it, click on the canvas outside the lines to deselect it
-* `A` and `D`` keys for navigation among the points on one line
+* `A` and `D` keys for navigation among the points on one line
 * arrow keys for adjusting the point on the line
 * mouse wheel for zooming in and out when point is not selected
 * mouse wheel for adjusting point up and down when selected
